@@ -863,7 +863,7 @@ timezone_setting() {
   info "*** 设置系统时区 ***"
 
   # 修改系统时区
-  if ! timedatectl | grep "Asia/Shanghai" 2>/dev/null; then
+  if ! timedatectl | grep "Asia/Shanghai" &>/dev/null; then
     info "设置系统时区为: ${Green}$TZ${Color_off}..."
     sudo timedatectl set-timezone $TZ
 
@@ -2174,7 +2174,7 @@ main() {
     echo "Usage: bash init.sh [type] [target] [options]"
     echo
     echo "init.sh [-h|--help] [-v|--version] [-b|--basic]"
-    echo "		{init,update,source,key,nginx,tengine,go,python,java,javascript,docker,shell} [target]"
+    echo "	{init,update,source,key,nginx,tengine,go,python,java,javascript,docker,shell} [target]"
     echo
     cmdCheck curl
     cmdCheck git
