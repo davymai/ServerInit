@@ -1,4 +1,4 @@
-<p align="center">
+<p align="left">
 	<a href="https://github.com/davymai/ServerInit">
         <img src="https://img.shields.io/badge/platform-Ubuntu20%2B_RockyLinux_8--9_CentOS_7-brightgreen?logo=platformdotsh"/>
     </a>
