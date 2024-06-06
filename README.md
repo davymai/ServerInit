@@ -1,6 +1,6 @@
 <p align="center">
-		<img src="https://img.shields.io/badge/platform-Ubuntu20+%20RockyLinux%208--9-CentOS%207"/>
-
+	<a><img src="https://img.shields.io/badge/platform-Ubuntu20+%20RockyLinux%208--9-CentOS%207"/>
+    </a>
 	<a href="https://github.com/davymai/ServerInit">
 		<img src="https://img.shields.io/badge/license-GPLv3.0"/>
 	</a>
