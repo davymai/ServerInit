@@ -1,5 +1,5 @@
 <p align="center">
-		<img src="https://img.shields.io/badge/platform-Ubuntu20+-RockyLinux-8--9-CentOS-7"/>
+		<img src="https://img.shields.io/badge/platform-Ubuntu20+%20RockyLinux%208--9-CentOS%207"/>
 
 	<a href="https://github.com/davymai/ServerInit">
 		<img src="https://img.shields.io/badge/license-GPLv3.0"/>
