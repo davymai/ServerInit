@@ -1,3 +1,11 @@
+<p align="center">
+		<img src="https://img.shields.io/badge/platform-Ubuntu20+-RockyLinux-8--9-CentOS-7"/>
+
+	<a href="https://github.com/davymai/ServerInit">
+		<img src="https://img.shields.io/badge/license-GPLv3.0"/>
+	</a>
+</p>
+
 # init.sh
 This is a Bash script for initializing servers, which includes the installation of various development environments and tools. It supports multiple Linux distributions (such as CentOS 7, Rocky 8-9, Ubuntu 20+), and includes the installation and configuration of Docker, MySQL, Redis, etc.
 >这个脚本是一个用于初始化服务器的 Bash 脚本，包含安装各种开发环境和工具的功能。它支持多种 Linux 发行版（如 CentOS 7 、Rocky 8-9、Ubuntu 20），并包含 Docker、MySQL、Redis 等工具的安装和配置。
