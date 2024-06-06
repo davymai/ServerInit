@@ -1,8 +1,9 @@
 <p align="center">
-	<a><img src="https://img.shields.io/badge/platform-Ubuntu20+%20RockyLinux%208--9-CentOS%207"/>
+	<a href="https://github.com/davymai/ServerInit">
+        <img src="https://img.shields.io/badge/platform-Ubuntu20%2B_RockyLinux_8--9_CentOS_7-brightgreen?logo=platformdotsh"/>
     </a>
 	<a href="https://github.com/davymai/ServerInit">
-		<img src="https://img.shields.io/badge/license-GPLv3.0"/>
+        <img src="https://img.shields.io/badge/License-GPLv3.0-orange"/>
 	</a>
 </p>
 
