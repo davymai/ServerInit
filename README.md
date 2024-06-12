@@ -2,8 +2,8 @@
 	<a href="https://github.com/davymai/ServerInit">
         <img src="https://img.shields.io/badge/platform-Ubuntu20%2B_RockyLinux_8--9_CentOS_7-brightgreen?logo=platformdotsh"/>
     </a>
-	<a href="https://github.com/davymai/ServerInit">
-        <img src="https://img.shields.io/badge/License-GPLv3.0-orange"/>
+	<a href="https://github.com/davymai/ServerInit/blob/master/LICENSE">
+        <img src="https://img.shields.io/badge/License-MIT-orange"/>
 	</a>
 </p>
 
