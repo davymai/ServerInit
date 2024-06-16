@@ -1,9 +1,9 @@
 ServerInit: Server Initialization script
 ==========================================
-<p align="left">
+
 [![platform](https://img.shields.io/badge/platform-Ubuntu20%252B_RockyLinux_8--9_CentOS_7-brightgreen?style=flat-square&logo=platformdotsh)](https://github.com/davymai/ServerInit)  
 [![Licence](https://img.shields.io/badge/License-MIT-orange?style=flat-square&label=License)](https://github.com/davymai/ServerInit/blob/master/LICENSE)
-</p>
+
 
 # init.sh
 This is a Bash script for initializing servers, which includes the installation of various development environments and tools. It supports multiple Linux distributions (such as CentOS 7, Rocky 8-9, Ubuntu 20+), and includes the installation and configuration of Docker, MySQL, Redis, etc.
