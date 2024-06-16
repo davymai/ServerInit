@@ -1,10 +1,8 @@
+ServerInit: Server Initialization script
+==========================================
 <p align="left">
-	<a href="https://github.com/davymai/ServerInit">
-        <img src="https://img.shields.io/badge/platform-Ubuntu20%2B_RockyLinux_8--9_CentOS_7-brightgreen?logo=platformdotsh"/>
-    </a>
-	<a href="https://github.com/davymai/ServerInit/blob/master/LICENSE">
-        <img src="https://img.shields.io/badge/License-MIT-orange"/>
-	</a>
+[![platform](https://img.shields.io/badge/platform-Ubuntu20%252B_RockyLinux_8--9_CentOS_7-brightgreen?style=flat-square&logo=platformdotsh)](https://github.com/davymai/ServerInit)  
+[![Licence](https://img.shields.io/badge/License-MIT-orange?style=flat-square&label=License)](https://github.com/davymai/ServerInit/blob/master/LICENSE)
 </p>
 
 # init.sh
