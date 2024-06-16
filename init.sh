@@ -4,7 +4,7 @@
 # Platform      : CentOS 7, Rocky 8-9, Ubuntu 20+ Based Platform
 # Author        : davymai(大威)
 # Contact       : i@davymai.com
-# Link          : https://github.com/davymai/InitServer
+# Link          : https://github.com/davymai/ServerInit
 # Filename      : init.sh
 # Usage         : bash init.sh
 # Description   : This is a Bash script for initializing servers, which includes the installation of various development environments and tools. It supports multiple Linux distributions (such as CentOS 7, Rocky 8-9, Ubuntu 20+), and includes the installation and configuration of Docker, MySQL, Redis, etc.
