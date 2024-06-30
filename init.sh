@@ -882,7 +882,7 @@ timezone_setting() {
       # 在现有的 pool 行之前添加新的 NTP 服务器
       sudo sed -i '/^pool/s/.*rocky.pool.ntp.org/pool cn.ntp.org.cn iburst\npool ntp.aliyun.com iburst\npool ntp.tencent.com iburst\n&/' /etc/chrony.conf
     else
-      # 在文件末尾添加新的 NTP 服务器
+      # 在 server 行前添加新的 NTP 服务器
       sudo sed -i '/^server/s/server 0.centos.pool.ntp.org/server cn.ntp.org.cn iburst\nserver ntp.aliyun.com iburst\nserver ntp.tencent.com iburst\n&/' /etc/chrony.conf
     fi
     sudo firewall-cmd --add-service=ntp --permanent
