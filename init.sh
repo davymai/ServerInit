@@ -186,6 +186,7 @@ update_source_for_china() {
       sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
       # 可选择使用其他源，比如阿里云
       # sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+      success "[sources] 源修改完毕\n"
       sudo apt-get update >/dev/null
     else
       # Rocky & CentOS /etc/yum.repos.d/ 创建备份目录
@@ -225,6 +226,7 @@ update_source_for_china() {
             -e 's!http://mirrors!https://mirrors!g' \
             -i "$file"
         done
+        success "[repos] 源修改完毕\n"
         # 更新缓存
         sudo yum makecache >/dev/null
 
@@ -233,7 +235,7 @@ update_source_for_china() {
         # CentOS
         config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'CentOS-*.repo')
         # 备份并修改配置文件
-        cont "[腾讯云] System /etc/yum.repos.d/"
+        cont "备份 /etc/yum.repos.d/"
         for file in $config_files; do
           if [[ -f $file ]]; then
             # 获取文件名和后缀
@@ -250,12 +252,14 @@ update_source_for_china() {
             sudo cp "$file" "$backup_directory/$new_filename"
             cont "备份: $file -> $backup_directory/$new_filename"
           fi
+
           sudo sed -e 's!^mirrorlist=!#mirrorlist=!g' \
             -e 's!^#baseurl=http://mirror.centos.org!baseurl=https://mirrors.cloud.tencent.com!g' \
             -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
             -e 's!http://mirrors!https://mirrors!g' \
             -i "$file"
         done
+        success "[repos] 源修改完毕\n"
         # 更新缓存
         sudo yum makecache fast >/dev/null
       fi
@@ -268,7 +272,7 @@ update_source_for_china() {
       sudo /usr/bin/crb enable
 
       # 备份并修改配置文件
-      cont "备份并修改 ${C05}$OS${CF} 的 epel 配置文件为[tsinghua清华]源"
+      cont "备份并修改 ${C02}$OS${CF} 的 epel 配置文件为[tsinghua清华]源"
       # 使用find命令查找/etc/yum.repos.d/目录下所有包含"epel"的文件，但不包括epel-cisco-openh264.repo
       config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'epel*.repo' ! -name 'epel-cisco-openh264.repo')
       for file in $config_files; do
@@ -295,7 +299,7 @@ update_source_for_china() {
           -e 's!http://mirrors!https://mirrors!g' \
           -i "$file"
       done
-      success "[tsinghua清华] epel /etc/yum.repos.d/epel.repo\n"
+      success "[epel] 源修改完毕\n"
 
     elif [[ "$OS" == **"CentOS"** ]]; then
       # 如果是CentOS，安装epel-release包
@@ -328,7 +332,7 @@ update_source_for_china() {
           -i "$file"
       done
 
-      success "[tsinghua清华] epel /etc/yum.repos.d/epel.repo\n"
+      success "[epel] 源修改完毕\n"
     fi
     ;;
   2)
