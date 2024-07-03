@@ -191,7 +191,7 @@ update_source_for_china() {
       # 创建备份
       cont "备份 /etc/apt/sources.list"
       sudo cp /etc/apt/sources.list{,.bak"$(date +%Y%m%d%-H%M%S)"}
-      sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+      sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.cloud.tencent.com/g' /etc/apt/sources.list
       # 可选择使用其他源，比如阿里云
       # sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
       success "[${C03}sources${CF}] 源修改为 [${C02}USTC中科大${CF}] 完成\n"
@@ -203,10 +203,10 @@ update_source_for_china() {
       cd "$source_directory"
       # 检查服务器类型和版本
       if [[ "$OS" == **"Rocky"** ]]; then
-        if [ "$OS_VER" == *"9"* ]; then
+        if [[ "$OS_VER" == *"9"* ]]; then
           # Rocky Linux 9
           config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'rocky*.repo')
-        elif [ "$OS_VER" == *"8"* ]; then
+        elif [[ "$OS_VER" == *"8"* ]]; then
           # Rocky Linux 8
           config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'Rocky*.repo')
         fi
@@ -229,12 +229,12 @@ update_source_for_china() {
             cont "备份: $file -> $backup_directory/$new_filename"
           fi
           sudo sed -e 's!^mirrorlist=!#mirrorlist=!g' \
-            -e 's!^#baseurl=http://dl.rockylinux.org/$contentdir!baseurl=https://mirrors.ustc.edu.cn/rocky!g' \
-            -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.tuna.tsinghua.edu.cn!g' \
+            -e 's!^#baseurl=http://dl.rockylinux.org/$contentdir!baseurl=https://mirrors.cloud.tencent.com/rocky!g' \
+            -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
             -e 's!http://mirrors!https://mirrors!g' \
             -i "$file"
         done
-        success "[${C03}repo${CF}] 源修改为 [${C02}USTC中科大${CF}] 完成\n"
+        success "[${C03}repo${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
         # 更新缓存
         sudo yum makecache >/dev/null
 
@@ -2168,9 +2168,9 @@ help() {
   echo "[source]"
   echo "[source]"
   echo "	sys: Automatic modification of source address based on system assessment."
-  echo "	Ubuntu:    http://mirrors.ustc.edu.cn/ubuntu/"
-  echo "	Rocky:     http://mirrors.ustc.edu.cn/rocky/"
-  echo "	CentOS:    http://mirrors.ustc.edu.cn/centos/"
+  echo "	Ubuntu:    https://mirrors.cloud.tencent.com/ubuntu/"
+  echo "	Rocky:     https://mirrors.cloud.tencent.com/rocky/"
+  echo "	CentOS:    https://mirrors.cloud.tencent.com/centos/"
   echo "	pip:       https://pypi.tuna.tsinghua.edu.cn/simple"
   echo "	docker:    https://docker.mirrors.ustc.edu.cn"
   echo
