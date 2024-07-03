@@ -15,13 +15,15 @@
 scriptdate='2024-06-05'
 scriptVer='0.3.1'
 
-# 1. 设置时区
-rtc_time=$(timedatectl | awk '/RTC time/ {print $4, $5}') && cn_time=$(date -d "$rtc_time 8 hours" +"%Y-%m-%d %H:%M:%S") && sudo timedatectl set-time "$cn_time"
-
-# 2. 检测系统类型
+# 1. 检测系统类型
 source /etc/os-release
 OS=$NAME
 OS_VER=$VERSION_ID
+
+# 2. 设置时区
+if [[ "$OS" != **"CentOS"** ]]; then
+rtc_time=$(timedatectl | awk '/RTC time/ {print $4, $5}') && cn_time=$(date -d "$rtc_time 8 hours" +"%Y-%m-%d %H:%M:%S") && sudo timedatectl set-time "$cn_time"
+fi
 
 # 3. 中文支持
 # 检查 /etc/profile 是否包含 "export LC_ALL=en_US.UTF-8"
@@ -61,23 +63,23 @@ IPADD=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/
 ShellFolder=$(cd "$(dirname -- "$0")" || exit pwd)
 
 # 11. 设置颜色变量
-Color_off='\033[0m'  # 终端默认颜色
-Black='\033[0;30m'   # 黑色
-Red='\033[0;31m'     # 红色
-Green='\033[0;32m'   # 绿色
-Yellow='\033[0;33m'  # 黄色
-Blue='\033[0;34m'    # 蓝色
-Purple='\033[0;35m'  # 紫色
-Cyan='\033[0;36m'    # 青色
-White='\033[0;37m'   # 白色
-BBlack='\033[1;30m'  # 粗体黑色
-BRed='\033[1;31m'    # 粗体红色
-BGreen='\033[1;32m'  # 粗体绿色
-BYellow='\033[1;33m' # 粗体黄色
-BBlue='\033[1;34m'   # 粗体蓝色
-BPurple='\033[1;35m' # 粗体紫色
-BCyan='\033[1;36m'   # 粗体青色
-BWhite='\033[1;37m'  # 粗体白色
+CF='\033[0m'     # 终端默认颜色
+C00='\033[0;30m' # 黑色
+C01='\033[0;31m' # 红色
+C02='\033[0;32m' # 绿色
+C03='\033[0;33m' # 黄色
+C04='\033[0;34m' # 蓝色
+C05='\033[0;35m' # 紫色
+C06='\033[0;36m' # 青色
+C07='\033[0;37m' # 白色
+C0='\033[1;30m'  # 高亮黑色
+C1='\033[1;31m'  # 高亮红色
+C2='\033[1;32m'  # 高亮绿色
+C3='\033[1;33m'  # 高亮黄色
+C4='\033[1;34m'  # 高亮蓝色
+C5='\033[1;35m'  # 高亮紫色
+C6='\033[1;36m'  # 高亮青色
+C7='\033[1;37m'  # 高亮白色
 
 # 12. 定义 成功/信息/错误/警告 等日志文字
 msg() {
@@ -85,22 +87,22 @@ msg() {
 }
 
 info() {
-  msg "${BBlue}[➮]${Color_off} ${1}${2}"
+  msg "${C4}[➮]${CF} ${1}${2}"
 }
 
 cont() {
-  msg "${BYellow}[►]${Color_off} ${1}${2}"
+  msg "${C3}[►]${CF} ${1}${2}"
 }
 
 warn() {
-  msg "${BPurple}[⚠️ WARNING]${Color_off} ${1}${2}"
+  msg "${C5}[⚠️ WARNING]${CF} ${1}${2}"
 }
 error() {
-  msg "${BRed}[✘ ERROR]${Color_off} ${1}${2}"
+  msg "${C1}[✘ ERROR]${CF} ${1}${2}"
   exit 1
 }
 success() {
-  msg "${BGreen}[✔]${Color_off} ${1}${2}"
+  msg "${C2}[✔]${CF} ${1}${2}"
 }
 # 删除线
 strike() {
@@ -115,7 +117,7 @@ blink() {
 
 welcome() {
   clear
-  msg "${Cyan}
+  msg "${C06}
      ____     _ __              ____                    
     /  _/__  (_) /_            / __/__ _____  _____ ____
    _/ // _ \/ / __/           _\ \/ -_) __/ |/ / -_) __/
@@ -125,8 +127,8 @@ welcome() {
               初始化系统以确保安全性和性能
 
         Version: ${scriptVer}    Update: ${scriptdate}
-        By: 大威(Davy)    System: ${BWhite}${OS} ${Purple}${OS_VER}
-        ${Color_off}"
+        By: 大威(Davy)    System: ${C2}${OS} ${C05}${OS_VER}
+        ${CF}"
 }
 
 #倒计时
@@ -135,23 +137,23 @@ countdown() {
   delay=1
 
   while [ $num -gt 0 ]; do
-    echo -ne "\r        ${Cyan}初始化脚本 ${BRed}$num${Cyan} 秒后开始, 按 ${BGreen}ctrl C ${Cyan}取消${Color_off}"
+    echo -ne "\r        ${C06}初始化脚本 ${C1}$num${C06} 秒后开始, 按 ${C3}ctrl C ${C06}取消${CF}"
     sleep $delay
     ((num--))
   done
 
-  echo -e "\r        ${Cyan}初始化脚本 ${BRed}0${Cyan} 秒后开始, 按 ${BGreen}ctrl C ${Cyan}取消${Color_off}"
+  echo -e "\r        ${C06}初始化脚本 ${C1}0${C06} 秒后开始, 按 ${C3}ctrl C ${C06}取消${CF}"
 }
 
 cmdCheck() {
   if ! hash "$1" >/dev/null 2>&1 && [[ "$OS" == **"Rocky"** ]]; then
-    error "Command [${BRed}${1}${Color_off}] not found, 请先安装 ${1} 再运行脚本。\n\n安装命令: \nsudo dnf install -y ${1}\n"
+    error "Command [${C1}${1}${CF}] not found, 请先安装 ${1} 再运行脚本。\n\n安装命令: \nsudo dnf install -y ${1}\n"
     return 1
   elif ! hash "$1" >/dev/null 2>&1 && [[ "$OS" == **"CentOS"** ]]; then
-    error "Command [${BRed}${1}${Color_off}] not found, 请先安装 ${1} 再运行脚本。\n\n安装命令: \nsudo yum install -y ${1}\n"
+    error "Command [${C1}${1}${CF}] not found, 请先安装 ${1} 再运行脚本。\n\n安装命令: \nsudo yum install -y ${1}\n"
     return 1
   elif ! hash "$1" >/dev/null 2>&1 && [[ "$OS" == **"Ubuntu"** ]]; then
-    error "Command [${BRed}${1}${Color_off}] not found, 请先安装 ${1} 再运行脚本。\n\n安装命令: \nsudo apt-get install -y ${1}\n"
+    error "Command [${C1}${1}${CF}] not found, 请先安装 ${1} 再运行脚本。\n\n安装命令: \nsudo apt-get install -y ${1}\n"
     return 0
   fi
 }
@@ -231,7 +233,7 @@ update_source_for_china() {
         # CentOS
         config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'CentOS-*.repo')
         # 备份并修改配置文件
-        cont "[USTC中科大] System /etc/yum.repos.d/"
+        cont "[腾讯云] System /etc/yum.repos.d/"
         for file in $config_files; do
           if [[ -f $file ]]; then
             # 获取文件名和后缀
@@ -249,8 +251,8 @@ update_source_for_china() {
             cont "备份: $file -> $backup_directory/$new_filename"
           fi
           sudo sed -e 's!^mirrorlist=!#mirrorlist=!g' \
-            -e 's!^#baseurl=http://mirror.centos.org!baseurl=https://mirrors.tuna.tsinghua.edu.cn!g' \
-            -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.tuna.tsinghua.edu.cn!g' \
+            -e 's!^#baseurl=http://mirror.centos.org!baseurl=https://mirrors.cloud.tencent.com!g' \
+            -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
             -e 's!http://mirrors!https://mirrors!g' \
             -i "$file"
         done
@@ -266,7 +268,7 @@ update_source_for_china() {
       sudo /usr/bin/crb enable
 
       # 备份并修改配置文件
-      cont "备份并修改 ${Purple}$OS${Color_off} 的 epel 配置文件为[tsinghua清华]源"
+      cont "备份并修改 ${C05}$OS${CF} 的 epel 配置文件为[tsinghua清华]源"
       # 使用find命令查找/etc/yum.repos.d/目录下所有包含"epel"的文件，但不包括epel-cisco-openh264.repo
       config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'epel*.repo' ! -name 'epel-cisco-openh264.repo')
       for file in $config_files; do
@@ -299,7 +301,7 @@ update_source_for_china() {
       # 如果是CentOS，安装epel-release包
       yumInstall "epel-release"
       # 备份并修改配置文件
-      cont "备份并修改 ${Purple}$OS${Color_off} 的 epel 配置文件为[tsinghua清华]源\n"
+      cont "备份并修改 ${C05}$OS${CF} 的 epel 配置文件为[腾讯云]源\n"
       config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'epel*.repo')
       for file in $config_files; do
         if [[ -f $file ]]; then
@@ -319,9 +321,9 @@ update_source_for_china() {
         fi
         sudo sed -e 's!^metalink=!#metalink=!g' \
           -e 's!^#baseurl=!baseurl=!g' \
-          -e 's!//download\.fedoraproject\.org/pub!//mirrors.tuna.tsinghua.edu.cn!g' \
-          -e 's!//download\.example/pub!//mirrors.tuna.tsinghua.edu.cn!g' \
-          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.tuna.tsinghua.edu.cn!g' \
+          -e 's!//download\.fedoraproject\.org/pub!//mirrors.cloud.tencent.com!g' \
+          -e 's!//download\.example/pub!//mirrors.cloud.tencent.com!g' \
+          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
           -e 's!http://mirrors!https://mirrors!g' \
           -i "$file"
       done
@@ -362,10 +364,10 @@ basic_tools_install() {
   info "*** 安装基础工具 ***"
 
   # 安装LSB提升系统兼容
-  cont "安装 ${BYellow}LSB${Color_off}..."
+  cont "安装 ${C3}LSB${CF}..."
   # 检查 lsb 是否已安装
   if command -v lsb_release >/dev/null 2>&1; then
-    warn "${BYellow}LSB${Color_off} 已安装，跳过。\n"
+    warn "${C3}LSB${CF} 已安装，跳过。\n"
   else
     # 安装 lsb
     case "$OS" in
@@ -387,12 +389,12 @@ basic_tools_install() {
     wait # 等待安装完成
 
     if command -v lsb_release >/dev/null 2>&1; then
-      success "${BYellow}LSB${Color_off} 安装完成。\n"
+      success "${C3}LSB${CF} 安装完成。\n"
     fi
   fi
 
   # Install basic tools
-  cont "安装 ${BYellow}基础工具${Color_off}..."
+  cont "安装 ${C3}基础工具${CF}..."
 
   # 定义基础工具列表
   tools=("vim" "curl" "wget" "git" "zip" "htop")
@@ -458,7 +460,7 @@ disable_services() {
 
     # 循环禁用服务
     for service in "${services_to_disable[@]}"; do
-      cont "正在禁用 ${BRed}${service}${Color_off} 服务..."
+      cont "正在禁用 ${C1}${service}${CF} 服务..."
       sudo systemctl stop "${service}.service"
       sudo systemctl disable "${service}.service"
     done
@@ -492,7 +494,7 @@ disable_selinux() {
 password_rules() {
   info "*** 设置系统密码规则，提升安全性 ***"
 
-  cont "正在设置密码规则...\n至少${BRed}8${Color_off}个字符,必须包含${BRed}大小${Color_off}写字母"
+  cont "正在设置密码规则...\n至少${C1}8${CF}个字符,必须包含${C1}大小${CF}写字母"
 
   # /etc/login.defs
   sudo sed -Ei "/^PASS_MIN_LEN/s!5!8!g" /etc/login.defs
@@ -557,7 +559,7 @@ create_new_user() {
     while :; do
       read -p "用户名: " userName
       if [[ "$userName" =~ .*root.* || "$userName" =~ .*admin.* ]]; then
-        warn "用户名不能以 ${Red}admin${Color_off} 或 ${Red}root${Color_off} 开头, 请重新输入\n"
+        warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头, 请重新输入\n"
       elif [ "$userName" = "" ]; then
         warn "用户名不能为<空>, 请重新输入\n"
       else
@@ -622,11 +624,11 @@ create_new_user() {
           success "用户 $userName 已添加到 /etc/sudoers。\n"
           userAdded=true
         else
-          warn "在尝试添加${Red}$userName${Color_off}到 /etc/sudoers 文件时发生错误。稍等片刻后将尝试再次添加。\n"
+          warn "在尝试添加${C01}$userName${CF}到 /etc/sudoers 文件时发生错误。稍等片刻后将尝试再次添加。\n"
           sleep 5 # 可以根据需要调整等待时间
         fi
       else
-        warn "用户 ${Green}$userName${Color_off} 已存在于 /etc/sudoers。\n"
+        warn "用户 ${C02}$userName${CF} 已存在于 /etc/sudoers。\n"
         userAdded=true
       fi
     done
@@ -655,7 +657,7 @@ create_new_user() {
     printf "请输入您的密钥: "
     read -r rsa_key
 
-    cont "为 ${Green}$userName${Color_off} 添加密钥..."
+    cont "为 ${C02}$userName${CF} 添加密钥..."
     if [ "$userName" == "root" ]; then
       # 为 root 用户添加密钥
 
@@ -684,7 +686,7 @@ create_new_user() {
       sudo chmod 600 "$user_auth_file"
     fi
 
-    success "用户: ${BGreen}$userName${Color_off} 密钥添加完成。\n"
+    success "用户: ${C2}$userName${CF} 密钥添加完成。\n"
 
     ;;
   esac
@@ -694,7 +696,7 @@ create_new_user() {
 sshd_setting() {
   info "*** 开始配置 SSH 权限 ***"
   # 输入错误密码时锁定用户 root 3分钟 其他用户 10分钟
-  cont "正在设置密码错误锁定规则...\nroot用户锁定: ${BRed}3${Color_off} 分钟\n其他用户锁定: ${BRed}10${Color_off} 分钟"
+  cont "正在设置密码错误锁定规则...\nroot用户锁定: ${C1}3${CF} 分钟\n其他用户锁定: ${C1}10${CF} 分钟"
   sudo sed -Ei '1a auth required pam_tally2.so deny=3 unlock_time=600 even_deny_root root_unlock_time=180' /etc/pam.d/sshd
   success "用户密码错误锁定规则完成。\n"
   cont "设置 SSH 端口..."
@@ -739,11 +741,11 @@ sshd_setting() {
   if ! sudo systemctl restart sshd; then
     error "sshd 重启失败，请检查配置。"
   else
-    success "${Purple}${OS}${Color_off} ${Green}$ssh_auth_file${Color_off} 修改完成。\n"
+    success "${C05}${OS}${CF} ${C02}$ssh_auth_file${CF} 修改完成。\n"
   fi
 
   # 防火墙设置
-  cont "防火墙放通 SSH 端口 ${Green}$sshPort${Color_off}..."
+  cont "防火墙放通 SSH 端口 ${C02}$sshPort${CF}..."
   if command -v firewall-cmd &>/dev/null; then
     # CentOS 和 Rocky Linux 上使用 firewalld
     if ! rpm -qa | grep firewalld >>/dev/null; then
@@ -756,7 +758,7 @@ sshd_setting() {
     #sudo firewall-cmd --permanent --add-masquerade
     sudo firewall-cmd --reload
     sudo firewall-cmd --list-all
-    success "防火墙已放通 ${Green}$sshPort${Color_off} SSH 端口。\n"
+    success "防火墙已放通 ${C02}$sshPort${CF} SSH 端口。\n"
   elif command -v ufw &>/dev/null; then
     # Ubuntu 上使用 ufw
     if ! dpkg-query -W -f='${Status}' ufw 2>/dev/null | grep -q "ok installed"; then
@@ -764,10 +766,10 @@ sshd_setting() {
       sudo apt-get update
       aptInstall "ufw"
     fi
-    cont "放通 SSH ${BYellow}$sshPort${Color_off} 端口..."
+    cont "放通 SSH ${C3}$sshPort${CF} 端口..."
     sudo ufw allow "$sshPort"/tcp
     sudo ufw --force enable
-    success "防火墙已放通 ${Green}$sshPort${Color_off} SSH 端口。\n"
+    success "防火墙已放通 ${C02}$sshPort${CF} SSH 端口。\n"
   else
     warn "不支持的防火墙管理工具。\n"
   fi
@@ -784,24 +786,48 @@ bashrc_setting() {
   }
 
   if [[ "$OS" == *"Ubuntu"* ]]; then
-    backup_bashrc /home/$userName/.bashrc
+    backup_bashrc /home/$currUser/.bashrc
     backup_bashrc /root/.bashrc
-
-    PS1_root='${debian_chroot:+($debian_chroot)}\[\033[33;1m\]\t \[\033[31;1m\]\u\[\033[32;1m\]@\[\033[34;1m\]\h \[\033[37;1m\]➜ \[\033[31;1m\]\w \[\033[m\]\[\]\$ '
-    PS1_user='${debian_chroot:+($debian_chroot)}\[\033[33;1m\]\t \[\033[37;1m\]\u\[\033[32;1m\]@\[\033[34;1m\]\h \[\033[37;1m\]➜ \[\033[31;1m\]\w \[\033[m\]\[\]\$ '
 
     sudo chmod o+rw /root/.bashrc
     sudo tee -a /root/.bashrc >/dev/null <<EOF
-export PS1='$PS1_root'
+#终端颜色
+C0='\[\e[0m\]'    # 终端默认颜色
+C1='\[\e[1;31m\]' # 红色
+C2='\[\e[1;32m\]' # 绿色
+C3='\[\e[1;33m\]' # 黄色
+C4='\[\e[1;34m\]' # 蓝色
+C5='\[\e[1;35m\]' # 紫色
+C6='\[\e[1;36m\]' # 青色
+C7='\[\e[1;37m\]' # 白色
+export PS1='\${C5}\t \${C1}\u\${C3}@\${C2}\h \${C6}\w \${C0}\\$ '
 EOF
     sudo chmod o-w /root/.bashrc
 
     sudo tee -a /home/$currUser/.bashrc >/dev/null <<EOF
-export PS1='$PS1_user'
+#终端颜色
+C0='\[\e[0m\]'    # 终端默认颜色
+C1='\[\e[1;31m\]' # 红色
+C2='\[\e[1;32m\]' # 绿色
+C3='\[\e[1;33m\]' # 黄色
+C4='\[\e[1;34m\]' # 蓝色
+C5='\[\e[1;35m\]' # 紫色
+C6='\[\e[1;36m\]' # 青色
+C7='\[\e[1;37m\]' # 白色
+export PS1='\${C5}\t \${C4}\u\${C3}@\${C2}\h \${C6}\w \${C0}\\$ '
 EOF
 
     sudo tee -a /home/$userName/.bashrc >/dev/null <<EOF
-export PS1='$PS1_user'
+#终端颜色
+C0='\[\e[0m\]'    # 终端默认颜色
+C1='\[\e[1;31m\]' # 红色
+C2='\[\e[1;32m\]' # 绿色
+C3='\[\e[1;33m\]' # 黄色
+C4='\[\e[1;34m\]' # 蓝色
+C5='\[\e[1;35m\]' # 紫色
+C6='\[\e[1;36m\]' # 青色
+C7='\[\e[1;37m\]' # 白色
+export PS1='\${C5}\t \${C4}\u\${C3}@\${C2}\h \${C6}\w \${C0}\\$ '
 EOF
 
     echo $'\nset -o vi\nalias vi="vim"\nalias ll="ls -ahlF --color=auto --time-style=long-iso"\nalias ls="ls --color=auto --time-style=long-iso"\nalias grep="grep --color=auto"' | sudo tee -a /root/.bashrc /home/$currUser/.bashrc /home/$userName/.bashrc >/dev/null
@@ -809,15 +835,22 @@ EOF
   else
     backup_bashrc /etc/bashrc
 
-    PS1_root='\[\033[33;1m\]\t \[\033[31;1m\]\u\[\033[32;1m\]@\[\033[34;1m\]\h \[\033[37;1m\]➜ \[\033[31;1m\]\w \[\033[m\]\[\]\$ '
-    PS1_user='\[\033[33;1m\]\t \[\033[37;1m\]\u\[\033[32;1m\]@\[\033[34;1m\]\h \[\033[37;1m\]➜ \[\033[31;1m\]\w \[\033[m\]\[\]\$ '
-
     sudo tee -a /etc/bashrc >/dev/null <<EOF
-if [ \$(whoami) = "root" ]; then
-  export PS1='$PS1_root'
+#终端颜色
+C0='\[\e[0m\]'    # 终端默认颜色
+C1='\[\e[1;31m\]' # 红色
+C2='\[\e[1;32m\]' # 绿色
+C3='\[\e[1;33m\]' # 黄色
+C4='\[\e[1;34m\]' # 蓝色
+C5='\[\e[1;35m\]' # 紫色
+C6='\[\e[1;36m\]' # 青色
+C7='\[\e[1;37m\]' # 白色
+if [ \$(whoami) = "root" ]; then # 设置 root 用户提示符为红色
+    PS1="\${C5}\t \${C1}\u\${C3}@\${C2}\h \${C6}\w \${C0}\\$ "
 else
-  export PS1='$PS1_user'
+    PS1="\${C5}\t \${C4}\u\${C3}@\${C2}\h \${C6}\w \${C0}\\$ "
 fi
+
 EOF
     echo $'\nset -o vi\nalias vi="vim"\nalias ll="ls -ahlF --color=auto --time-style=long-iso"\nalias ls="ls --color=auto --time-style=long-iso"\nalias grep="grep --color=auto"' | sudo tee -a /etc/bashrc >/dev/null
 
@@ -864,11 +897,11 @@ timezone_setting() {
 
   # 修改系统时区
   if ! timedatectl | grep "Asia/Shanghai" &>/dev/null; then
-    info "设置系统时区为: ${Green}$TZ${Color_off}..."
+    info "设置系统时区为: ${C02}$TZ${CF}..."
     sudo timedatectl set-timezone $TZ
 
   else
-    warn "当前系统时区为: ${Green}$TZ${Color_off}, 跳过时区设置。"
+    warn "当前系统时区为: ${C02}$TZ${CF}, 跳过时区设置。"
   fi
 
   # 时间同步
@@ -905,7 +938,7 @@ timezone_setting() {
     warn "未知系统，无法设置时间同步。"
   fi
 
-  success "系统时区已设为：${Green}$TZ${Color_off} 并${Green}开启${Color_off}时间同步。\n"
+  success "系统时区已设为：${C02}$TZ${CF} 并${C02}开启${CF}时间同步。\n"
 }
 
 # 配置 ulimit
@@ -1123,7 +1156,7 @@ install_tengine() {
     tengine_version=${tengine_version:-"3.1.0"}
     # 检查 HTTP 状态码是否为 200
     if [ "$(curl --write-out %{http_code} --silent --output /dev/null "https://tengine.taobao.org/download/tengine-${tengine_version}.tar.gz")" != 200 ]; then
-      warn "${Purple}\033[5m版本号错误,请重新输入！\033[0m"
+      warn "${C05}\033[5m版本号错误,请重新输入！\033[0m"
       warn "版本号查询：https://tengine.taobao.org/download.html"
     else
       break
@@ -1512,7 +1545,7 @@ install_golang() {
   ln -s /usr/go/bin/* /usr/bin/
 
   go_version=$(go version | grep "go version" | cut -f4 -d "o" | awk '{print $1}')
-  msg "go 版本: ${BYellow}$go_version${Color_off}"
+  msg "go 版本: ${C3}$go_version${CF}"
   success "golang 安装完成。\n"
 }
 
@@ -1520,7 +1553,7 @@ install_mongodb() {
   info "*** 安装 MongoDB 4 数据库 ***"
 
   if [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Rocky"* ]]; then
-    cont "添加 MongoDB ${BYellow}清华大学${Color_off} 源镜像..."
+    cont "添加 MongoDB ${C3}清华大学${CF} 源镜像..."
 
     if [[ "$OS" == *"CentOS"* ]]; then
       cat >/etc/yum.repos.d/mongodb.repo <<EOF
@@ -1557,7 +1590,7 @@ EOF
     sudo sed -i '$ a\exclude=mongodb-org,mongodb-org-server,mongodb-org-shell,mongodb-org-mongos,mongodb-org-tools' /etc/yum.conf
     mongodb_version=$(mongo --version | grep "version" | cut -f3 -d "v" | awk 'NR==1 {print $1}')
   elif [ "$OS" == "Ubuntu" ]; then
-    cont "添加 MongoDB ${BYellow}清华大学${Color_off} 源镜像..."
+    cont "添加 MongoDB ${C3}清华大学${CF} 源镜像..."
     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68B6BDBE9D8F6FD818A4E2D50A928072509AEC16
     echo "deb [ arch=amd64,arm64 ] https://mirrors.tuna.tsinghua.edu.cn/mongodb/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list
     sudo apt-get update
@@ -1597,21 +1630,21 @@ EOF
         mongodb_port="27017"
       fi
       if [[ ! $mongodb_port =~ ^[0-9]+$ ]]; then
-        warn "端口仅支持${Red}数字${Color_off}, 请重新输入!\n"
+        warn "端口仅支持${C01}数字${CF}, 请重新输入!\n"
       elif [ "$mongodb_port" -gt "65535" ]; then
-        warn "端口号不能超过 ${Red}65535${Color_off}, 请重新输入!\n"
+        warn "端口号不能超过 ${C01}65535${CF}, 请重新输入!\n"
       else
         break
       fi
     done
 
-    cont "修改 MongoDB 端口为: ${BYellow}$mongodb_port${Color_off} ..."
+    cont "修改 MongoDB 端口为: ${C3}$mongodb_port${CF} ..."
     sudo sed -i '/^  port:/s/  port: 27017/  port: '"$mongodb_port"'/g' /etc/mongod.conf
     cont "开启 MongoDB 外部访问 ..."
     sudo sed -i '/^  bindIp:/s/  bindIp: 127.0.0.1/  bindIp: 0.0.0.0/g' /etc/mongod.conf
 
     # 开放防火墙端口
-    cont "Firewalld 防火墙放通 MongoDB ${BYellow}$mongodb_port${Color_off} 端口..."
+    cont "Firewalld 防火墙放通 MongoDB ${C3}$mongodb_port${CF} 端口..."
     if [ "$OS" == "Ubuntu" ]; then
       sudo ufw allow "$mongodb_port"/tcp
       sudo systemctl restart mongod
@@ -1621,7 +1654,7 @@ EOF
       if ! sudo systemctl restart mongod; then
         error "MongoDB 重启失败, 请检查配置!\n"
       else
-        success "MongoDB 端口: ${BYellow}$mongodb_port${Color_off} 设置完成。\n"
+        success "MongoDB 端口: ${C3}$mongodb_port${CF} 设置完成。\n"
       fi
     fi
   else
@@ -1690,7 +1723,7 @@ dockerDevelopEnv() {
 install_mysql8() {
   info "*** 安装 MySQL 8 数据库 ***"
 
-  cont "添加 ${BYellow}MySQL Community${Color_off} 源镜像..."
+  cont "添加 ${C3}MySQL Community${CF} 源镜像..."
 
   if [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Rocky"* ]]; then
     # 下载 MySQL 8.0 的 rpm 仓库源
@@ -1763,9 +1796,9 @@ install_mysql8() {
       mysql_port="3306"
     fi
     if [[ ! $mysql_port =~ ^[0-9]+$ ]]; then
-      warn "端口仅支持${Red}数字${Color_off}, 请重新输入!\n"
+      warn "端口仅支持${C01}数字${CF}, 请重新输入!\n"
     elif [ "$mysql_port" -gt "65535" ]; then
-      warn "端口号不能超过 ${Red}65535${Color_off}, 请重新输入!\n"
+      warn "端口号不能超过 ${C01}65535${CF}, 请重新输入!\n"
     else
       break
     fi
@@ -1780,7 +1813,7 @@ install_mysql8() {
   fi
 
   # 开放防火墙端口
-  cont "Firewalld 防火墙放通 ${BYellow}$mysql_port${Color_off} 端口..."
+  cont "Firewalld 防火墙放通 ${C3}$mysql_port${CF} 端口..."
 
   if [ "$OS" == "Ubuntu" ]; then
     sudo ufw allow "$mysql_port"/tcp
@@ -1791,7 +1824,7 @@ install_mysql8() {
     if ! sudo systemctl restart mysqld; then
       error "mysqld 服务重启失败, 请检查配置!\n"
     else
-      success "成功设置 MySQL 端口为: ${BYellow}$mysql_port${Color_off}\n"
+      success "成功设置 MySQL 端口为: ${C3}$mysql_port${CF}\n"
     fi
   fi
 
@@ -1839,7 +1872,7 @@ install_mysql8() {
   if ! sudo systemctl restart mysqld; then
     error "mysqld 服务重启失败, 请检查配置!\n"
   else
-    success "MySQL root 密码设置为: ${BYellow}$mysql_passwd${Color_off}\n"
+    success "MySQL root 密码设置为: ${C3}$mysql_passwd${CF}\n"
   fi
 
   info "*** 添加 MySQL 用户 ***"
@@ -1855,16 +1888,16 @@ install_mysql8() {
     printf "请输入 MySQL 用户名: "
     read -r mysql_user_name
     if [[ "$mysql_user_name" =~ .*root.* || "$mysql_user_name" =~ .*adm.* ]]; then
-      warn "用户名不能为 ${BRed}root${Color_off} 或 ${BRed}admin{Color_off},  请重新输入\n"
+      warn "用户名不能为 ${C1}root${CF} 或 ${C1}admin{CF},  请重新输入\n"
     else
       break
     fi
   done
 
   while :; do
-    msg "请输入 MySQL ${Yellow}$mysql_user_name${Color_off} 用户密码(留空默认: 123456): "
+    msg "请输入 MySQL ${C03}$mysql_user_name${CF} 用户密码(留空默认: 123456): "
     read -r mysql_user_pass
-    msg "再次确认 MySQL ${Yellow}$mysql_user_name${Color_off} 用户密码(留空默认: 123456): "
+    msg "再次确认 MySQL ${C03}$mysql_user_name${CF} 用户密码(留空默认: 123456): "
     read -r mysql_user_passwd
     if [ -z "$mysql_user_pass" ] && [ -z "$mysql_user_passwd" ]; then
       mysql_user_pass="123456"
@@ -1890,7 +1923,7 @@ install_mysql8() {
   if ! sudo systemctl restart mysqld; then
     error "mysqld 服务重启失败, 请检查 create_mysql_user 配置!\n"
   else
-    success "MySQL 密码成功设置为: ${BYellow}$mysql_user_passwd${Color_off}\n\n"
+    success "MySQL 密码成功设置为: ${C3}$mysql_user_passwd${CF}\n\n"
   fi
 
 }
@@ -1898,7 +1931,7 @@ install_mysql8() {
 install_redis() {
   info "*** 安装 Redis ***"
 
-  cont "添加 remi ${BYellow}清华大学${Color_off} 源镜像..."
+  cont "添加 remi ${C3}清华大学${CF} 源镜像..."
 
   if [[ "$OS" == *"CentOS"* ]] || [[ "$OS" == *"Rocky"* ]]; then
     releasever=""
@@ -1955,9 +1988,9 @@ install_redis() {
       Redis_port="6379"
     fi
     if [[ ! $Redis_port =~ ^[0-9]+$ ]]; then
-      warn "端口仅支持${Red}数字${Color_off}, 请重新输入!\n"
+      warn "端口仅支持${C01}数字${CF}, 请重新输入!\n"
     elif [ "$Redis_port" -gt "65535" ]; then
-      warn "端口号不能超过 ${Red}65535${Color_off}, 请重新输入!\n"
+      warn "端口号不能超过 ${C01}65535${CF}, 请重新输入!\n"
     else
       break
     fi
@@ -1978,7 +2011,7 @@ install_redis() {
     if ! sudo systemctl restart redis; then
       error "Redis 服务重启失败, 请检查 config_redis_port 配置!\n"
     else
-      success "成功设置 Redis 端口为: ${BYellow}$Redis_port${Color_off}\n"
+      success "成功设置 Redis 端口为: ${C3}$Redis_port${CF}\n"
     fi
   fi
 
@@ -2020,7 +2053,7 @@ install_redis() {
       if ! sudo systemctl restart redis; then
         error "Redis 服务重启失败, 请检查 config_redis_password 配置!\n"
       else
-        success "成功设置 Redis 访问密码为: ${BRed}$Redis_passwd${Color_off}\n"
+        success "成功设置 Redis 访问密码为: ${C1}$Redis_passwd${CF}\n"
       fi
     else
       error "未找到 Redis 配置文件 /etc/redis.conf。\n"
@@ -2030,33 +2063,33 @@ install_redis() {
 }
 
 finish() {
-  msg "${Cyan} 
- 当前系统时间：${BYellow}$(date)${Cyan}
+  msg "${C06} 
+ 当前系统时间：${C3}$(date)${C06}
  +------------------------------------------------------------------------+
- |             ${Green}系统初始化完成，请保存好以下信息并执行重启系统!${Cyan}            |
- +------------------------------------------------------------------------+${Color_off}\n"
+ |             ${C02}系统初始化完成，请保存好以下信息并执行重启系统!${C06}            |
+ +------------------------------------------------------------------------+${CF}\n"
   # 判断 go 是否存在
   if [ -f "/usr/bin/go" ]; then
-    msg "${White}go 版本: ${BCyan}$go_version${Color_off}"
+    msg "${C07}go 版本: ${C6}$go_version${CF}"
   else
     printf ''
   fi
   # 判断 git 是否存在
   if [ -f "/usr/bin/git" ]; then
     git_version=$(git version | grep "version" | awk '{print $3}')
-    msg "${White}git 版本: ${BCyan}$git_version${Color_off}"
+    msg "${C07}git 版本: ${C6}$git_version${CF}"
   else
     printf ''
   fi
-  msg "${Blue}================
-${White}SSH 端口: ${Green}$sshPort
-${White}IP 地址: ${Yellow}$MYIP
-${White}用户名: ${Blue}$userName
-${White}密码: ${Red}$userPasswd \033[5m👈 ${Purple}\033[5m请牢记密码\033[0m
-${Cyan}*** 系统默认${Red}禁止${Cyan}密码登陆, 需要密码登陆请使用以下命令设置:${Color_off}
+  msg "${C04}================
+${C07}SSH 端口: ${C02}$sshPort
+${C07}IP 地址: ${C03}$MYIP
+${C07}用户名: ${C04}$userName
+${C07}密码: ${C01}$userPasswd \033[5m👈 ${C05}\033[5m请牢记密码\033[0m
+${C06}*** 系统默认${C01}禁止${C06}密码登陆, 需要密码登陆请使用以下命令设置:${CF}
 sed -Ei '/^PasswordAuthentication no/s/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 systemctl restart sshd
-${Cyan}*** 系统默认${Red}禁止🙅${Red}\033[9m\$root\033[0m${Cyan}🙅登陆, 需要${Red}root${Cyan}登陆请使用以下命令设置: ${Color_off}"
+${C06}*** 系统默认${C01}禁止🙅${C01}\033[9m\$root\033[0m${C06}🙅登陆, 需要${C01}root${C06}登陆请使用以下命令设置: ${CF}"
   if [ "$OS" == **"CentOS"** ]; then
     msg "sudo sed -Ei 's/#PermitRootLogin yes/PermitRootLogin no/g' /etc/ssh/sshd_config"
 
@@ -2064,30 +2097,30 @@ ${Cyan}*** 系统默认${Red}禁止🙅${Red}\033[9m\$root\033[0m${Cyan}🙅登�
     msg "sudo sed -Ei '/^PermitRootLogin no/s/PermitRootLogin no/PermitRootLogin yes/g' /etc/ssh/sshd_config"
     msg "sudo sed -Ei '/^UsePAM/s//#/g' /etc/ssh/sshd_config"
   fi
-  msg "${Blue}================
-${White}内网连接:${Color_off} ssh -p ${Green}$sshPort${Color_off} -i ${Yellow}私钥文件 ${White}$userName${Green}@${Blue}$IPADD${Color_off}
-${White}互联网连接:${Color_off} ssh -p ${Green}$sshPort${Color_off} -i ${Yellow}私钥文件 ${White}$userName${Green}@${Blue}$MYIP${Color_off}"
+  msg "${C04}================
+${C07}内网连接:${CF} ssh -p ${C02}$sshPort${CF} -i ${C03}私钥文件 ${C07}$userName${C02}@${C04}$IPADD${CF}
+${C07}互联网连接:${CF} ssh -p ${C02}$sshPort${CF} -i ${C03}私钥文件 ${C07}$userName${C02}@${C04}$MYIP${CF}"
   # 判断 nginx 是否存在
   if [ -f "/usr/sbin/nginx" ]; then
-    msg "${Blue}================\n${White}nginx 版本: ${BCyan}$nginx_version${Color_off}\n${White}nginx http 端口: ${BYellow}$http_port${Color_off}\n${White}nginx https 端口: ${BYellow}$https_port${Color_off}"
+    msg "${C04}================\n${C07}nginx 版本: ${C6}$nginx_version${CF}\n${C07}nginx http 端口: ${C3}$http_port${CF}\n${C07}nginx https 端口: ${C3}$https_port${CF}"
   else
     printf ''
   fi
   # 判断 mysql 是否存在
   if [ -f "/usr/bin/mysql" ]; then
-    msg "${Blue}================\n${Blue}MySQL 版本: ${BCyan}$mysql_version\n${Blue}MySQL 端口: ${BYellow}$mysql_port\n${Blue}MySQL ${BWhite}root ${Blue}密码: ${BRed}$mysql_passwd${Color_off}\n${Blue}MySQL 新用户: ${BPurple}$mysql_user_name${Color_off}\n${Blue}MySQL ${BWhite}$mysql_user_name ${Blue}用户密码: ${BRed}$mysql_user_passwd${Color_off}"
+    msg "${C04}================\n${C04}MySQL 版本: ${C6}$mysql_version\n${C04}MySQL 端口: ${C3}$mysql_port\n${C04}MySQL ${C7}root ${C04}密码: ${C1}$mysql_passwd${CF}\n${C04}MySQL 新用户: ${C5}$mysql_user_name${CF}\n${C04}MySQL ${C7}$mysql_user_name ${C04}用户密码: ${C1}$mysql_user_passwd${CF}"
   else
     printf ''
   fi
   # 判断 redis 是否存在
   if [ -d "/run/redis" ]; then
-    msg "${Blue}================\n${Purple}Redis 版本: ${BCyan}$redis_version\n${Purple}Redis 端口: ${BYellow}$Redis_port${Purple}\nRedis 密码: ${BYellow}$Redis_passwd${Color_off}"
+    msg "${C04}================\n${C05}Redis 版本: ${C6}$redis_version\n${C05}Redis 端口: ${C3}$Redis_port${C05}\nRedis 密码: ${C3}$Redis_passwd${CF}"
   else
     printf ''
   fi
   # 判断 mongodb 是否存在
   if [ -f "/usr/bin/mongod" ]; then
-    msg "${Blue}================\n${Green}MongoDB 版本: ${BCyan}$mongodb_version\n${Green}MongoDB 端口: ${BYellow}$mongodb_port${Color_off}"
+    msg "${C04}================\n${C02}MongoDB 版本: ${C6}$mongodb_version\n${C02}MongoDB 端口: ${C3}$mongodb_port${CF}"
   else
     printf ''
   fi
@@ -2184,7 +2217,7 @@ main() {
     "init")
       welcome
       countdown 5
-      echo -e "                ${Cyan}初始化脚本开始执行...${Color_off}\n"
+      echo -e "                ${C06}初始化脚本开始执行...${CF}\n"
       update_source_for_china 1
       update_and_upgrade_system
       basic_tools_install
