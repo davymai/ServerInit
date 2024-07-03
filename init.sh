@@ -428,7 +428,7 @@ basic_tools_install() {
       yumInstall "net-tools"
     fi
   fi
-
+  # 守护进程
   if [ -e "/etc/supervisord.conf" ] || [ -e "/etc/supervisor/supervisord.conf" ]; then
     warn "supervisor 已安装，跳过。"
   else
