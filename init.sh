@@ -1058,11 +1058,9 @@ net.ipv4.conf.all.rp_filter = 1
 EOF
   fi
   if command -v sysctl &>/dev/null; then
-    sleep $delay
     sudo sysctl -p
     success "sysctl 内核优化完成。\n"
   elif command -v sysctl.d &>/dev/null; then
-    sleep $delay
     sudo sysctl --system
     success "sysctl 内核优化完成。\n"
   else
@@ -1071,14 +1069,12 @@ EOF
       sudo apt-get update
       aptInstall "procps"
       if command -v sysctl &>/dev/null; then
-        sleep $delay
         sudo sysctl -p
         success "sysctl 内核优化完成。\n"
       fi
     elif [[ "$OS" == **"Rocky"** ]] || [[ "$OS" == **"CentOS"** ]]; then
       yumInstall "procps"
       if command -v sysctl &>/dev/null; then
-        sleep $delay
         sudo sysctl -p
         success "sysctl 内核优化完成。\n"
       else
