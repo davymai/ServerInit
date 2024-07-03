@@ -2106,7 +2106,7 @@ finish() {
   msg "${C04}================
 ${C07}SSH 端口: ${C02}$sshPort
 ${C07}IP 地址: ${C03}$MYIP
-${C07}用户名: ${C4}$userName
+${C07}用户名: ${C04}$userName
 ${C07}密码: ${C01}$userPasswd \E[33;5m👈 ${C05}\E[33;5m请牢记密码${CF}
 ${C06}*** 系统默认${C01}禁止${C06}密码登陆, 需要密码登陆请使用以下命令设置:${CF}
 sed -Ei '/^PasswordAuthentication no/s/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
