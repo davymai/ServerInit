@@ -12,8 +12,8 @@
 
 # 初始化脚本设置 {{{
 # 脚本版本
-scriptdate='2024-06-05'
-scriptVer='0.3.1'
+scriptdate='2024-07-03'
+scriptVer='0.3.2'
 
 # 1. 检测系统类型
 source /etc/os-release
@@ -22,7 +22,7 @@ OS_VER=$VERSION_ID
 
 # 2. 设置时区
 if [[ "$OS" != **"CentOS"** ]]; then
-rtc_time=$(timedatectl | awk '/RTC time/ {print $4, $5}') && cn_time=$(date -d "$rtc_time 8 hours" +"%Y-%m-%d %H:%M:%S") && sudo timedatectl set-time "$cn_time"
+  rtc_time=$(timedatectl | awk '/RTC time/ {print $4, $5}') && cn_time=$(date -d "$rtc_time 8 hours" +"%Y-%m-%d %H:%M:%S") && sudo timedatectl set-time "$cn_time"
 fi
 
 # 3. 中文支持
@@ -63,23 +63,24 @@ IPADD=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/
 ShellFolder=$(cd "$(dirname -- "$0")" || exit pwd)
 
 # 11. 设置颜色变量
-CF='\033[0m'     # 终端默认颜色
-C00='\033[0;30m' # 黑色
-C01='\033[0;31m' # 红色
-C02='\033[0;32m' # 绿色
-C03='\033[0;33m' # 黄色
-C04='\033[0;34m' # 蓝色
-C05='\033[0;35m' # 紫色
-C06='\033[0;36m' # 青色
-C07='\033[0;37m' # 白色
-C0='\033[1;30m'  # 高亮黑色
-C1='\033[1;31m'  # 高亮红色
-C2='\033[1;32m'  # 高亮绿色
-C3='\033[1;33m'  # 高亮黄色
-C4='\033[1;34m'  # 高亮蓝色
-C5='\033[1;35m'  # 高亮紫色
-C6='\033[1;36m'  # 高亮青色
-C7='\033[1;37m'  # 高亮白色
+SS='\033[5m'   # 文字闪烁
+CF='\033[0m'   # 关闭文字属性
+C00='\E[0;30m' # 黑色
+C01='\E[0;31m' # 红色
+C02='\E[0;32m' # 绿色
+C03='\E[0;33m' # 黄色
+C04='\E[0;34m' # 蓝色
+C05='\E[0;35m' # 紫色
+C06='\E[0;36m' # 青色
+C07='\E[0;37m' # 白色
+C0='\E[1;30m'  # 高亮黑色
+C1='\E[1;31m'  # 高亮红色
+C2='\E[1;32m'  # 高亮绿色
+C3='\E[1;33m'  # 高亮黄色
+C4='\E[1;34m'  # 高亮蓝色
+C5='\E[1;35m'  # 高亮紫色
+C6='\E[1;36m'  # 高亮青色
+C7='\E[1;37m'  # 高亮白色
 
 # 12. 定义 成功/信息/错误/警告 等日志文字
 msg() {
@@ -106,12 +107,16 @@ success() {
 }
 # 删除线
 strike() {
-  printf '%b\n' "\033[9m$1\033[0m" >&2
+  printf '%b\n' "\E[33;9m$1\E[0m" >&2
 }
 # 文字闪烁
 blink() {
-  printf '%b\n' "\033[5m$1\033[0m" >&2
+  printf '%b\n' "\E[33;5m$1\E[0m" >&2
 }
+
+#倒计时参数
+cd_num=5
+delay=1
 
 # }}}
 
@@ -126,23 +131,26 @@ welcome() {
      Ubuntu & Rocky Linux 8,9 & CentOS 7 初始化脚本
               初始化系统以确保安全性和性能
 
+        ${C7}系统默认${SS}${C1}禁止${C7}密码登陆, 请提前准备好公钥${C06}
+
         Version: ${scriptVer}    Update: ${scriptdate}
         By: 大威(Davy)    System: ${C2}${OS} ${C05}${OS_VER}
         ${CF}"
 }
 
 #倒计时
-countdown() {
-  num=$1
-  delay=1
+CD() {
 
-  while [ $num -gt 0 ]; do
-    echo -ne "\r        ${C06}初始化脚本 ${C1}$num${C06} 秒后开始, 按 ${C3}ctrl C ${C06}取消${CF}"
+  while [ $cd_num -gt 0 ]; do
+    echo -ne "\r        ${C06}初始化脚本 ${C1}$cd_num${C06} 秒后开始, 按 ${C3}ctrl C ${C06}取消${CF}"
     sleep $delay
-    ((num--))
+    ((cd_num--))
   done
 
   echo -e "\r        ${C06}初始化脚本 ${C1}0${C06} 秒后开始, 按 ${C3}ctrl C ${C06}取消${CF}"
+  sleep $delay
+  echo -ne "\033[A\r\033[K"
+  msg "                ${C06}开始执行初始化脚本...${CF}\n"
 }
 
 cmdCheck() {
@@ -181,12 +189,12 @@ update_source_for_china() {
     if [[ "$OS" == *"Ubuntu"* ]]; then
       # Ubuntu /etc/sources.list
       # 创建备份
-      cont "[USTC中科大] System /etc/apt/sources.list"
+      cont "备份 /etc/apt/sources.list"
       sudo cp /etc/apt/sources.list{,.bak"$(date +%Y%m%d%-H%M%S)"}
       sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
       # 可选择使用其他源，比如阿里云
       # sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
-      success "[sources] 源修改完毕\n"
+      success "[${C03}sources${CF}] 源修改为 [${C02}USTC中科大${CF}] 完成\n"
       sudo apt-get update >/dev/null
     else
       # Rocky & CentOS /etc/yum.repos.d/ 创建备份目录
@@ -203,7 +211,7 @@ update_source_for_china() {
           config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'Rocky*.repo')
         fi
         # 备份并修改配置文件
-        cont "[USTC中科大] System /etc/yum.repos.d/"
+        cont "备份 /etc/yum.repos.d/"
         for file in $config_files; do
           if [[ -f $file ]]; then
             # 获取文件名和后缀
@@ -226,7 +234,7 @@ update_source_for_china() {
             -e 's!http://mirrors!https://mirrors!g' \
             -i "$file"
         done
-        success "[repos] 源修改完毕\n"
+        success "[${C03}repo${CF}] 源修改为 [${C02}USTC中科大${CF}] 完成\n"
         # 更新缓存
         sudo yum makecache >/dev/null
 
@@ -259,9 +267,9 @@ update_source_for_china() {
             -e 's!http://mirrors!https://mirrors!g' \
             -i "$file"
         done
-        success "[repos] 源修改完毕\n"
         # 更新缓存
         sudo yum makecache fast >/dev/null
+        success "[${C03}repo${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
       fi
     fi
     # epel
@@ -272,7 +280,7 @@ update_source_for_china() {
       sudo /usr/bin/crb enable
 
       # 备份并修改配置文件
-      cont "备份并修改 ${C02}$OS${CF} 的 epel 配置文件为[tsinghua清华]源"
+      cont "备份并修改 ${C4}$OS${CF} 的 epel 配置文件为[tsinghua清华]源"
       # 使用find命令查找/etc/yum.repos.d/目录下所有包含"epel"的文件，但不包括epel-cisco-openh264.repo
       config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'epel*.repo' ! -name 'epel-cisco-openh264.repo')
       for file in $config_files; do
@@ -299,13 +307,13 @@ update_source_for_china() {
           -e 's!http://mirrors!https://mirrors!g' \
           -i "$file"
       done
-      success "[epel] 源修改完毕\n"
+      success "[${C03}epel${CF}] 源修改为 [${C02}tsinghua清华${CF}] 完成\n"
 
     elif [[ "$OS" == **"CentOS"** ]]; then
       # 如果是CentOS，安装epel-release包
       yumInstall "epel-release"
       # 备份并修改配置文件
-      cont "备份并修改 ${C05}$OS${CF} 的 epel 配置文件为[腾讯云]源\n"
+      cont "备份并修改 ${C4}$OS${CF} 的 epel 配置文件\n"
       config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'epel*.repo')
       for file in $config_files; do
         if [[ -f $file ]]; then
@@ -332,7 +340,7 @@ update_source_for_china() {
           -i "$file"
       done
 
-      success "[epel] 源修改完毕\n"
+      success "[${C03}epel${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
     fi
     ;;
   2)
@@ -512,7 +520,7 @@ minlen = 8
 minclass = 2
 maxrepeat = 3
 EOL
-  elif [ "$OS" == **"CentOS"** ]; then
+  elif [[ "$OS" == **"CentOS"** ]]; then
     # 至少 8 个字符
     sudo authconfig --passminlen=8 --update
     # 至少 2 种字符类别
@@ -564,7 +572,9 @@ create_new_user() {
       read -p "用户名: " userName
       if [[ "$userName" =~ .*root.* || "$userName" =~ .*admin.* ]]; then
         warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头, 请重新输入\n"
-      elif [ "$userName" = "" ]; then
+      elif echo "$userName" | grep -qP '[\p{Han}]'; then
+        warn "用户名不能包含<中文>, 请重新输入\n"
+      elif [ -z "$userName" ]; then
         warn "用户名不能为<空>, 请重新输入\n"
       else
         break
@@ -583,11 +593,15 @@ create_new_user() {
       elif [ -z "$userPasswd" ]; then
         warn "密码不能为<空>，请重新输入\n"
       elif [[ ${#userPass} -lt 8 || ! "$userPass" =~ [A-Z] || ! "$userPass" =~ [a-z] ]]; then
-        warn "密码必须至少包含8个字符，包括至少1个大写字母和1个小写字母，请重新输入\n"
+        warn "密码必须至少8个字符，包括至少1个大写字母和1个小写字母，请重新输入\n"
       else
         break
       fi
     done
+
+    # 为新增用户添加密钥
+    printf "请输入您的公钥: "
+    read -r user_rsa
 
     # 添加用户及密码
     if [[ "$OS" == *"Ubuntu"* ]]; then
@@ -597,10 +611,6 @@ create_new_user() {
       useradd -G wheel "$userName"
       sudo echo "$userPasswd" | passwd --stdin "$userName" >/dev/null 2>&1
     fi
-
-    # 为新增用户添加密钥
-    printf "请输入您的公钥: "
-    read -r user_rsa
 
     # 新增 ssh 目录
     sudo mkdir -p /home/$userName/.ssh
@@ -625,15 +635,16 @@ create_new_user() {
         # 将 $userName 用户添加到 /etc/sudoers
         echo "$userName ALL=(ALL) NOPASSWD: ALL" | sudo tee -a /etc/sudoers >/dev/null
         if [ $? -eq 0 ]; then
-          success "用户 $userName 已添加到 /etc/sudoers。\n"
+          success "成功创建用户 ${C4}$userName${CF} 并添加到 /etc/sudoers。\n"
           userAdded=true
         else
           warn "在尝试添加${C01}$userName${CF}到 /etc/sudoers 文件时发生错误。稍等片刻后将尝试再次添加。\n"
-          sleep 5 # 可以根据需要调整等待时间
+          sleep $delay # 可以根据需要调整等待时间
+          userAdded=false
         fi
       else
         warn "用户 ${C02}$userName${CF} 已存在于 /etc/sudoers。\n"
-        userAdded=true
+        userAdded=false
       fi
     done
     ;;
@@ -646,6 +657,8 @@ create_new_user() {
       # 检测用户名是否不存在
       if [ -z "$userName" ]; then
         warn "用户名不能为<空>，请重新输入\n"
+      elif echo "$userName" | grep -qP '[\p{Han}]'; then
+        warn "用户名不能包含<中文>, 请重新输入\n"
       elif ! id "$userName" &>/dev/null; then
         warn "用户 $userName 不存在，请重新输入\n"
       else
@@ -1045,29 +1058,34 @@ net.ipv4.conf.all.rp_filter = 1
 EOF
   fi
   if command -v sysctl &>/dev/null; then
-    sudo sysctl -p >/dev/null
+    sleep $delay
+    sudo sysctl -p
+    success "sysctl 内核优化完成。\n"
   elif command -v sysctl.d &>/dev/null; then
+    sleep $delay
     sudo sysctl --system
+    success "sysctl 内核优化完成。\n"
   else
     warn "无法找到 sysctl 命令，开始安装...\n"
     if [[ "$OS" == *"Ubuntu"* ]]; then
       sudo apt-get update
       aptInstall "procps"
+      if command -v sysctl &>/dev/null; then
+        sleep $delay
+        sudo sysctl -p
+        success "sysctl 内核优化完成。\n"
+      fi
     elif [[ "$OS" == **"Rocky"** ]] || [[ "$OS" == **"CentOS"** ]]; then
       yumInstall "procps"
-    else
-      warn "不支持的系统类型。\n"
-      return 1
+      if command -v sysctl &>/dev/null; then
+        sleep $delay
+        sudo sysctl -p
+        success "sysctl 内核优化完成。\n"
+      else
+        warn "不支持的系统类型。\n"
+        return 1
+      fi
     fi
-
-    if command -v sysctl &>/dev/null; then
-      success "sysctl 安装完成。\n"
-      sudo sysctl -p
-    else
-      warn "sysctl 仍然未找到，无法应用配置。\n"
-      return 1
-    fi
-    success "sysctl 内核优化完成。\n"
   fi
 }
 
@@ -1160,7 +1178,7 @@ install_tengine() {
     tengine_version=${tengine_version:-"3.1.0"}
     # 检查 HTTP 状态码是否为 200
     if [ "$(curl --write-out %{http_code} --silent --output /dev/null "https://tengine.taobao.org/download/tengine-${tengine_version}.tar.gz")" != 200 ]; then
-      warn "${C05}\033[5m版本号错误,请重新输入！\033[0m"
+      warn "${C05}\E[33;5m版本号错误,请重新输入！\E[0m"
       warn "版本号查询：https://tengine.taobao.org/download.html"
     else
       break
@@ -1593,7 +1611,7 @@ EOF
     cont "锁定 MongoDB 4 版本，不跟随 yum 升级..."
     sudo sed -i '$ a\exclude=mongodb-org,mongodb-org-server,mongodb-org-shell,mongodb-org-mongos,mongodb-org-tools' /etc/yum.conf
     mongodb_version=$(mongo --version | grep "version" | cut -f3 -d "v" | awk 'NR==1 {print $1}')
-  elif [ "$OS" == "Ubuntu" ]; then
+  elif [[ "$OS" == "Ubuntu" ]]; then
     cont "添加 MongoDB ${C3}清华大学${CF} 源镜像..."
     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68B6BDBE9D8F6FD818A4E2D50A928072509AEC16
     echo "deb [ arch=amd64,arm64 ] https://mirrors.tuna.tsinghua.edu.cn/mongodb/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list
@@ -1649,7 +1667,7 @@ EOF
 
     # 开放防火墙端口
     cont "Firewalld 防火墙放通 MongoDB ${C3}$mongodb_port${CF} 端口..."
-    if [ "$OS" == "Ubuntu" ]; then
+    if [[ "$OS" == "Ubuntu" ]]; then
       sudo ufw allow "$mongodb_port"/tcp
       sudo systemctl restart mongod
     elif [[ "$OS" == *"Rocky"* ]] || [[ "$OS" == *"CentOS"* ]]; then
@@ -1745,7 +1763,7 @@ install_mysql8() {
     # 安装 MySQL Community Server 8.0.31
     sudo yum module disable -y mysql
     sudo yum install -y mysql-community-server-8.0.31
-  elif [ "$OS" == "Ubuntu" ]; then
+  elif [[ "$OS" == "Ubuntu" ]]; then
     sudo wget -P /usr//src https://dev.mysql.com/get/mysql-apt-config_0.8.17-1_all.deb
     sudo dpkg -i /usr//src/mysql-apt-config_0.8.17-1_all.deb
     sudo apt-get update
@@ -1819,7 +1837,7 @@ install_mysql8() {
   # 开放防火墙端口
   cont "Firewalld 防火墙放通 ${C3}$mysql_port${CF} 端口..."
 
-  if [ "$OS" == "Ubuntu" ]; then
+  if [[ "$OS" == "Ubuntu" ]]; then
     sudo ufw allow "$mysql_port"/tcp
     sudo systemctl restart mysqld
   elif [[ "$OS" == *"Rocky"* ]] || [[ "$OS" == *"CentOS"* ]]; then
@@ -1945,7 +1963,7 @@ install_redis() {
 
     sudo yum install -y https://mirrors.tuna.tsinghua.edu.cn/remi/enterprise/remi-release-${releasever}.rpm
     sudo yum --enablerepo=remi install -y redis
-  elif [ "$OS" == "Ubuntu" ]; then
+  elif [[ "$OS" == "Ubuntu" ]]; then
     sudo add-apt-repository ppa:remi/php
     sudo apt-get update
     sudo apt-get install -y redis-server
@@ -2088,13 +2106,13 @@ finish() {
   msg "${C04}================
 ${C07}SSH 端口: ${C02}$sshPort
 ${C07}IP 地址: ${C03}$MYIP
-${C07}用户名: ${C04}$userName
-${C07}密码: ${C01}$userPasswd \033[5m👈 ${C05}\033[5m请牢记密码\033[0m
+${C07}用户名: ${C4}$userName
+${C07}密码: ${C01}$userPasswd \E[33;5m👈 ${C05}\E[33;5m请牢记密码${CF}
 ${C06}*** 系统默认${C01}禁止${C06}密码登陆, 需要密码登陆请使用以下命令设置:${CF}
 sed -Ei '/^PasswordAuthentication no/s/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 systemctl restart sshd
-${C06}*** 系统默认${C01}禁止🙅${C01}\033[9m\$root\033[0m${C06}🙅登陆, 需要${C01}root${C06}登陆请使用以下命令设置: ${CF}"
-  if [ "$OS" == **"CentOS"** ]; then
+${C06}*** 系统默认${C01}禁止🙅${C01}\E[33;9m\$root${CF}${C06}🙅登陆, 需要${C01}root${C06}登陆请使用以下命令设置: ${CF}"
+  if [[ "$OS" == **"CentOS"** ]]; then
     msg "sudo sed -Ei 's/#PermitRootLogin yes/PermitRootLogin no/g' /etc/ssh/sshd_config"
 
   else
@@ -2220,8 +2238,7 @@ main() {
     case $1 in
     "init")
       welcome
-      countdown 5
-      echo -e "                ${C06}初始化脚本开始执行...${CF}\n"
+      CD
       update_source_for_china 1
       update_and_upgrade_system
       basic_tools_install
