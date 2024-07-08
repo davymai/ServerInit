@@ -1094,6 +1094,7 @@ install_nginx() {
   # Nginx 安装逻辑
   if [[ "$OS" == **"CentOS"** ]] || [[ "$OS" == **"Rocky"** ]]; then
     yumInstall "yum-utils"
+    cont "添加 ${C04}Nginx${CF} [${C02}USTC中科大${CF}] 下载源"
     sudo tee /etc/yum.repos.d/nginx.repo >/dev/null <<EOF
 [nginx-stable]
 name=nginx stable repo
@@ -1152,8 +1153,11 @@ EOF
     sudo ufw --force enable
   elif command -v firewall-cmd &>/dev/null; then
     sudo firewall-cmd --permanent --add-port="$http_port/tcp"
+    success "防火墙放通 http ${C02}$http_port${CF} 端口完成。\n"
     sudo firewall-cmd --permanent --add-port="$https_port/tcp"
+    success "防火墙放通 https ${C02}$https_port${CF} 端口完成。\n"
     sudo firewall-cmd --reload
+    success "Nginx 安装启动完成。\n"
   else
     warn "不支持的防火墙管理工具，请手动配置防火墙规则!"
   fi
