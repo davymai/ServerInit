@@ -1088,6 +1088,7 @@ EOF
 install_nginx() {
   info "*** 安装 Nginx ***"
   if ! sudo grep -q "^fs.file-max" /etc/sysctl.conf; then
+    cont "系统内核优化..."
     sysctl_setting
   fi
   # Nginx 安装逻辑
