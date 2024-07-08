@@ -196,13 +196,12 @@ update_source_for_china() {
       # sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
       success "[${C03}sources${CF}] 源修改为 [${C02}USTC中科大${CF}] 完成\n"
       sudo apt-get update >/dev/null
-    else
+    elif [[ "$OS" == **"Rocky"** ]]; then
       # Rocky & CentOS /etc/yum.repos.d/ 创建备份目录
       sudo mkdir -p "$backup_directory"
       # 进入源文件夹
       cd "$source_directory"
       # 检查服务器类型和版本
-      if [[ "$OS" == **"Rocky"** ]]; then
         if [[ "$OS_VER" == *"9"* ]]; then
           # Rocky Linux 9
           config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'rocky*.repo')
@@ -1184,7 +1183,7 @@ install_tengine() {
   tengine_user="nginx"
   source_path="/server/nginx/sbin/nginx"
   link_path="/usr/sbin/nginx"
-  tengine_src="/usr//src/tengine_install_tmp"
+  tengine_src="/usr/src/tengine_install_tmp"
   jemalloc_dl="https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2"
   tengine_dl="https://tengine.taobao.org/download/tengine-$tengine_version.tar.gz"
 
@@ -1211,6 +1210,7 @@ install_tengine() {
   # Tengine 安装逻辑
 
   if ! sudo grep -q "^fs.file-max" /etc/sysctl.conf; then
+    cont "系统内核优化..."
     sysctl_setting
   else
     cont "内核已优化，安装 Tengine $tengine_version..."
