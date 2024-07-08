@@ -168,17 +168,17 @@ cmdCheck() {
 
 aptInstall() {
   info "安装 ${1}..."
-  sudo apt-get install -y $1
+  sudo apt-get install -y -v $1
 }
 
 dnfInstall() {
   info "安装 ${1}..."
-  sudo dnf install -y $1
+  sudo dnf install -y -v $1
 }
 
 yumInstall() {
   info "安装 ${1}..."
-  sudo yum install -y $1
+  sudo yum install -y -v $1
 }
 
 # Change the source of the package
@@ -194,7 +194,7 @@ update_source_for_china() {
       sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.cloud.tencent.com/g' /etc/apt/sources.list
       # 可选择使用其他源，比如阿里云
       # sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
-      success "[${C03}sources${CF}] 源修改为 [${C02}USTC中科大${CF}] 完成\n"
+      success "[${C03}sources${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
       sudo apt-get update >/dev/null
     elif [[ "$OS" == **"Rocky"** ]]; then
       # Rocky & CentOS /etc/yum.repos.d/ 创建备份目录
