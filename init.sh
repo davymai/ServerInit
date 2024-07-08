@@ -168,17 +168,17 @@ cmdCheck() {
 
 aptInstall() {
   info "安装 ${1}..."
-  sudo apt-get install -y -v $1
+  sudo apt-get install -y $1
 }
 
 dnfInstall() {
   info "安装 ${1}..."
-  sudo dnf install -y -v $1
+  sudo dnf install -y $1
 }
 
 yumInstall() {
   info "安装 ${1}..."
-  sudo yum install -y -v $1
+  sudo yum install -y $1
 }
 
 # Change the source of the package
@@ -202,75 +202,75 @@ update_source_for_china() {
       # 进入源文件夹
       cd "$source_directory"
       # 检查服务器类型和版本
-        if [[ "$OS_VER" == *"9"* ]]; then
-          # Rocky Linux 9
-          config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'rocky*.repo')
-        elif [[ "$OS_VER" == *"8"* ]]; then
-          # Rocky Linux 8
-          config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'Rocky*.repo')
-        fi
-        # 备份并修改配置文件
-        cont "备份 /etc/yum.repos.d/"
-        for file in $config_files; do
-          if [[ -f $file ]]; then
-            # 获取文件名和后缀
-            filename=$(basename "$file")
-            extension="${filename##*.}"
-
-            # 移除原有后缀
-            filename_no_ext="${filename%.*}"
-
-            # 修改后缀并添加日期
-            new_filename="$filename_no_ext-$current_date.$extension"
-
-            # 备份文件
-            sudo cp "$file" "$backup_directory/$new_filename"
-            cont "备份: $file -> $backup_directory/$new_filename"
-          fi
-          sudo sed -e 's!^mirrorlist=!#mirrorlist=!g' \
-            -e 's!^#baseurl=http://dl.rockylinux.org/$contentdir!baseurl=https://mirrors.cloud.tencent.com/rocky!g' \
-            -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
-            -e 's!http://mirrors!https://mirrors!g' \
-            -i "$file"
-        done
-        success "[${C03}repo${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
-        # 更新缓存
-        sudo yum makecache >/dev/null
-
-      # CentOS Linux /etc/yum.repos.d/
-      elif [[ "$OS" == **"CentOS"** ]]; then
-        # CentOS
-        config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'CentOS-*.repo')
-        # 备份并修改配置文件
-        cont "备份 /etc/yum.repos.d/"
-        for file in $config_files; do
-          if [[ -f $file ]]; then
-            # 获取文件名和后缀
-            filename=$(basename "$file")
-            extension="${filename##*.}"
-
-            # 移除原有后缀
-            filename_no_ext="${filename%.*}"
-
-            # 修改后缀并添加日期
-            new_filename="$filename_no_ext-$current_date.$extension"
-
-            # 备份文件
-            sudo cp "$file" "$backup_directory/$new_filename"
-            cont "备份: $file -> $backup_directory/$new_filename"
-          fi
-
-          sudo sed -e 's!^mirrorlist=!#mirrorlist=!g' \
-            -e 's!^#baseurl=http://mirror.centos.org!baseurl=https://mirrors.cloud.tencent.com!g' \
-            -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
-            -e 's!http://mirrors!https://mirrors!g' \
-            -i "$file"
-        done
-        # 更新缓存
-        sudo yum makecache fast >/dev/null
-        success "[${C03}repo${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
+      if [[ "$OS_VER" == *"9"* ]]; then
+        # Rocky Linux 9
+        config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'rocky*.repo')
+      elif [[ "$OS_VER" == *"8"* ]]; then
+        # Rocky Linux 8
+        config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'Rocky*.repo')
       fi
+      # 备份并修改配置文件
+      cont "备份 /etc/yum.repos.d/"
+      for file in $config_files; do
+        if [[ -f $file ]]; then
+          # 获取文件名和后缀
+          filename=$(basename "$file")
+          extension="${filename##*.}"
+
+          # 移除原有后缀
+          filename_no_ext="${filename%.*}"
+
+          # 修改后缀并添加日期
+          new_filename="$filename_no_ext-$current_date.$extension"
+
+          # 备份文件
+          sudo cp "$file" "$backup_directory/$new_filename"
+          cont "备份: $file -> $backup_directory/$new_filename"
+        fi
+        sudo sed -e 's!^mirrorlist=!#mirrorlist=!g' \
+          -e 's!^#baseurl=http://dl.rockylinux.org/$contentdir!baseurl=https://mirrors.cloud.tencent.com/rocky!g' \
+          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
+          -e 's!http://mirrors!https://mirrors!g' \
+          -i "$file"
+      done
+      success "[${C03}repo${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
+      # 更新缓存
+      sudo yum makecache >/dev/null
+
+    # CentOS Linux /etc/yum.repos.d/
+    elif [[ "$OS" == **"CentOS"** ]]; then
+      # CentOS
+      config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'CentOS-*.repo')
+      # 备份并修改配置文件
+      cont "备份 /etc/yum.repos.d/"
+      for file in $config_files; do
+        if [[ -f $file ]]; then
+          # 获取文件名和后缀
+          filename=$(basename "$file")
+          extension="${filename##*.}"
+
+          # 移除原有后缀
+          filename_no_ext="${filename%.*}"
+
+          # 修改后缀并添加日期
+          new_filename="$filename_no_ext-$current_date.$extension"
+
+          # 备份文件
+          sudo cp "$file" "$backup_directory/$new_filename"
+          cont "备份: $file -> $backup_directory/$new_filename"
+        fi
+
+        sudo sed -e 's!^mirrorlist=!#mirrorlist=!g' \
+          -e 's!^#baseurl=http://mirror.centos.org!baseurl=https://mirrors.cloud.tencent.com!g' \
+          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
+          -e 's!http://mirrors!https://mirrors!g' \
+          -i "$file"
+      done
+      # 更新缓存
+      sudo yum makecache fast >/dev/null
+      success "[${C03}repo${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
     fi
+
     # epel
     # 检查服务器类型
     if [[ "$OS" == **"Rocky"** ]]; then
@@ -1100,15 +1100,15 @@ name=nginx stable repo
 baseurl=http://nginx.org/packages/centos/\$releasever/\$basearch/
 gpgcheck=1
 enabled=1
-gpgkey=https://nginx.org/keys/nginx_signing.key
+gpgkey=https://mirrors.ustc.edu.cn/nginx/keys/nginx_signing.key
 module_hotfixes=true
 
 [nginx-mainline]
 name=nginx mainline repo
-baseurl=http://nginx.org/packages/mainline/centos/\$releasever/\$basearch/
+baseurl=https://mirrors.ustc.edu.cn/nginx/mainline/centos/\$releasever/\$basearch/
 gpgcheck=1
 enabled=0
-gpgkey=https://nginx.org/keys/nginx_signing.key
+gpgkey=https://mirrors.ustc.edu.cn/nginx/keys/nginx_signing.key
 module_hotfixes=true
 EOF
     yumInstall "nginx"
