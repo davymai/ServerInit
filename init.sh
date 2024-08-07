@@ -2663,6 +2663,9 @@ EOF
           # 可选：清理下载的压缩文件
           #rm "$SOFT_DIR/logstash-$ES_VER-linux-x86_64.tar.gz"
           #success "已删除下载的压缩文件。"
+
+          cont "为 elastic 创建密码"
+          elasticsearch-reset-password -u elastic -i
           break
         else
           warn "下载地址无效，请重新输入版本号。"
