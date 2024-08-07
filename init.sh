@@ -21,8 +21,21 @@ OS=$NAME
 OS_VER=$VERSION_ID
 
 # 2. 设置时区
-if [[ "$OS" != **"CentOS"** ]]; then
-  rtc_time=$(timedatectl | awk '/RTC time/ {print $4, $5}') && cn_time=$(date -d "$rtc_time 8 hours" +"%Y-%m-%d %H:%M:%S") && sudo timedatectl set-time "$cn_time"
+# 检查 timedatectl 的 NTP 服务状态
+NTP_STATUS=$(timedatectl show -p NTPSynchronized --value)
+if [ "$NTP_STATUS" != "yes" ]; then
+  echo "NTP 服务未启用。设置时区和时间。"
+  if [[ "$OS" != **"CentOS"** ]]; then
+    # 获取当前 RTC 时间
+    rtc_time=$(timedatectl | awk '/RTC time/ {print $4, $5}')
+    # 计算中国标准时间 (CST)
+    cn_time=$(date -d "$rtc_time 8 hours" +"%Y-%m-%d %H:%M:%S")
+    # 设置系统时间为中国标准时间
+    sudo timedatectl set-time "$cn_time"
+    echo "时区已设置为中国标准时间 (CST)。"
+  fi
+else
+  echo "NTP 服务已启用。"
 fi
 
 # 3. 中文支持
@@ -1686,6 +1699,53 @@ EOF
 
 }
 
+javaDevelopEnv() {
+  case ${1} in
+  1)
+    info "安装 OpenJDK"
+    if [[ "$OS" == **"Rocky"** ]]; then
+      if ! sudo grep -q "export JAVA_HOME" /etc/profile; then
+        mkdir /usr/local/java/
+        cd /usr/local/
+        wget https://mirrors.tuna.tsinghua.edu.cn/Adoptium/21/jdk/x64/linux/OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz
+        tar -zxf OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz -C /usr/local/java/
+
+        # 如果不包含，则添加该行
+        echo "" | sudo tee -a /etc/profile >/dev/null
+        echo "# OpenJDK" | sudo tee -a /etc/profile >/dev/null
+        echo "export JAVA_HOME=/usr/local/java/jdk-21.0.4+7" | sudo tee -a /etc/profile >/dev/null
+        echo "export JRE_HOME=\${JAVA_HOME}/jre" | sudo tee -a /etc/profile >/dev/null
+        echo "export CLASSPATH=.:\${JAVA_HOME}/lib:\${JRE_HOME}/lib" | sudo tee -a /etc/profile >/dev/null
+        echo "export PATH=\${JAVA_HOME}/bin:\$PATH" | sudo tee -a /etc/profile >/dev/null
+        # 重新加载 /etc/profile 以应用更改
+        source /etc/profile
+        java -version
+        success "OpenJDK 安装完毕"
+      else
+        # 使用 grep 查找 export JAVA_HOME 行
+        JAVA_HOME_LINE=$(grep "export JAVA_HOME=" /etc/profile)
+
+        if [ -n "$JAVA_HOME_LINE" ]; then
+          # 使用 cut 命令提取路径部分
+          JAVA_HOME_PATH=$(echo $JAVA_HOME_LINE | cut -d '=' -f 2)
+          warn "OpenJDK 已安装，路径是: $JAVA_HOME_PATH"
+        fi
+      fi
+    fi
+    ;;
+  2)
+    info "maven: A software project management and comprehension tool"
+    if [[ "$OS" == **"Rocky"** ]]; then
+      dnfInstall maven
+    elif [[ "$OS" == *"Ubuntu"* ]]; then
+      aptInstall maven
+    elif [[ "$OS" == *"CentOS"* ]]; then
+      yumInstall maven
+    fi
+    ;;
+  esac
+}
+
 pythonDevelopEnv() {
   case ${1} in
   1)
@@ -2314,7 +2374,6 @@ main() {
       ;;
     "java")
       javaDevelopEnv 1
-      javaDevelopEnv 2
       ;;
     "java jdk")
       javaDevelopEnv 1
