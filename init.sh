@@ -584,6 +584,8 @@ create_new_user() {
       read -p "用户名: " userName
       if [[ "$userName" =~ .*root.* || "$userName" =~ .*admin.* ]]; then
         warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头, 请重新输入\n"
+      elif id -u "$userName" >/dev/null 2>&1; then
+        warn "用户 \"$userName\" 已存在，请重新输入\\n"
       elif echo "$userName" | grep -qP '[\p{Han}]'; then
         warn "用户名不能包含<中文>, 请重新输入\n"
       elif [ -z "$userName" ]; then
@@ -716,6 +718,33 @@ create_new_user() {
     fi
 
     success "用户: ${C2}$userName${CF} 密钥添加完成。\n"
+
+    ;;
+  3)
+    #添加非登陆用户
+    info "创建 非登陆用户"
+    # 检查是否提供了用户名和密码作为参数
+    if [ $# -ne 2 ]; then
+      echo "Usage: $0 <username> <password>"
+      exit 1
+    fi
+
+    USERNAME=$1
+    PASSWORD=$2
+
+    # 检查是否已经存在该用户
+    if id -u "$USERNAME" >/dev/null 2>&1; then
+      echo "用户 $USERNAME 已存在。"
+      exit 1
+    fi
+
+    # 创建用户并指定其 shell 为 /sbin/nologin
+    sudo useradd -s /sbin/nologin "$USERNAME"
+
+    # 设置用户密码
+    echo "$USERNAME:$PASSWORD" | sudo chpasswd
+
+    success "非登陆用户 $USERNAME 密码 $PASSWORD 创建完毕。"
 
     ;;
   esac
@@ -1702,34 +1731,46 @@ EOF
 javaDevelopEnv() {
   case ${1} in
   1)
-    info "安装 OpenJDK"
-    if [[ "$OS" == **"Rocky"** ]]; then
-      if ! sudo grep -q "export JAVA_HOME" /etc/profile; then
-        mkdir /usr/local/java/
-        cd /usr/local/
-        wget https://mirrors.tuna.tsinghua.edu.cn/Adoptium/21/jdk/x64/linux/OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz
-        tar -zxf OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz -C /usr/local/java/
+    info "安装 Java"
+    OpenJDK_URL="https://mirrors.tuna.tsinghua.edu.cn/Adoptium/21/jdk/x64/linux/OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz"
+    JAVA_DIR="/usr/local/java"
 
-        # 如果不包含，则添加该行
-        echo "" | sudo tee -a /etc/profile >/dev/null
-        echo "# OpenJDK" | sudo tee -a /etc/profile >/dev/null
-        echo "export JAVA_HOME=/usr/local/java/jdk-21.0.4+7" | sudo tee -a /etc/profile >/dev/null
-        echo "export JRE_HOME=\${JAVA_HOME}/jre" | sudo tee -a /etc/profile >/dev/null
-        echo "export CLASSPATH=.:\${JAVA_HOME}/lib:\${JRE_HOME}/lib" | sudo tee -a /etc/profile >/dev/null
-        echo "export PATH=\${JAVA_HOME}/bin:\$PATH" | sudo tee -a /etc/profile >/dev/null
-        # 重新加载 /etc/profile 以应用更改
-        source /etc/profile
-        java -version
-        success "OpenJDK 安装完毕"
+    # 检查 Java 是否已安装
+    if [[ "$OS" == *"Rocky"* ]]; then
+      if command -v java &>/dev/null; then
+        INSTALLED_VERSION=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
+        success "Java 已安装，当前版本: $INSTALLED_VERSION."
       else
-        # 使用 grep 查找 export JAVA_HOME 行
-        JAVA_HOME_LINE=$(grep "export JAVA_HOME=" /etc/profile)
+        warn "Java 未安装，正在进行安装..."
+        # 创建 JDK 目录
+        sudo mkdir -p "$JAVA_DIR"
 
-        if [ -n "$JAVA_HOME_LINE" ]; then
-          # 使用 cut 命令提取路径部分
-          JAVA_HOME_PATH=$(echo $JAVA_HOME_LINE | cut -d '=' -f 2)
-          warn "OpenJDK 已安装，路径是: $JAVA_HOME_PATH"
-        fi
+        # 下载 JDK
+        cont "正在下载 OpenJDK..."
+        wget -q "$OpenJDK_URL" -P /tmp/
+
+        # 解压 JDK
+        cont "正在解压 OpenJDK..."
+        sudo tar -xzf "/tmp/OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz" -C "$JAVA_DIR"
+
+        # 设置环境变量
+        JAVA_INSTALL_DIR="$JAVA_DIR/jdk-21.0.4+7"
+        rm -rf /etc/profile.d/java.sh
+        echo "export JAVA_HOME=$JAVA_INSTALL_DIR" | sudo tee -a /etc/profile.d/java.sh
+        echo "export PATH=\$PATH:\$JAVA_HOME/bin" | sudo tee -a /etc/profile.d/java.sh
+
+        # 重新加载环境变量
+        source /etc/profile.d/java.sh
+
+        # 更新 alternatives
+        sudo update-alternatives --install /usr/bin/java java "$JAVA_INSTALL_DIR/bin/java" 1
+        sudo update-alternatives --install /usr/bin/javac javac "$JAVA_INSTALL_DIR/bin/javac" 1
+
+        # 清理下载的文件
+        rm "/tmp/OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz"
+
+        success "Java 安装完成，您可以使用 'java -version' 来验证安装成功."
+        java -version
       fi
     fi
     ;;
@@ -2145,6 +2186,495 @@ install_redis() {
 
 }
 
+Install_elk() {
+  case ${1} in
+  1)
+    info "安装 ELK"
+
+    OpenJDK_URL="https://mirrors.tuna.tsinghua.edu.cn/Adoptium/21/jdk/x64/linux/OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz"
+    JAVA_DIR="/usr/local/java"
+
+    # 检查 Java 是否已安装
+    if [[ "$OS" == *"Rocky"* ]]; then
+      if command -v java &>/dev/null; then
+        INSTALLED_VERSION=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
+        success "Java 已安装，当前版本: $INSTALLED_VERSION."
+      else
+        javaDevelopEnv 1
+      fi
+    fi
+
+    cont "安装 Elasticsearch"
+    # 默认参数
+    ES_BASE_URL="https://mirrors.huaweicloud.com/elasticsearch"
+    SOFT_DIR="/data/soft"
+    ES_DIR="/data/elk/es"
+    ES_BASE_DIR="/data/elk/es/elasticsearch"
+    ES_DATA_DIR="$ES_DIR/data"
+    ES_LOGS_DIR="$ES_DIR/logs"
+    ES_PROFILE_FILE="/etc/profile.d/es.sh"
+    OLD_PATH_REGEX="export PATH=\$PATH:$ES_BASE_DIR-[0-9.]+/bin"
+    # 默认版本号
+    DEFAULT_VERSION="8.8.1"
+
+    # 版本号格式正则表达式
+    VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
+
+    # 创建所需的目录
+    mkdir -p "$SOFT_DIR" "$ES_DIR" "$ES_DATA_DIR" "$ES_LOGS_DIR"
+
+    while :; do
+      # 提示用户输入版本号
+      read -rp "输入 Elasticsearch 版本号(留空默认: $DEFAULT_VERSION): " ES_VER
+
+      # 如果用户没有输入版本号，则使用默认版本号
+      if [[ -z "$ES_VER" ]]; then
+        ES_VER="$DEFAULT_VERSION"
+      fi
+
+      # 检查版本号格式
+      if [[ "$ES_VER" =~ $VERSION_REGEX ]]; then
+        # 拼接下载地址
+        ES_DOWNLOAD_URL="$ES_BASE_URL/$DEFAULT_VERSION/elasticsearch-$ES_VER-linux-x86_64.tar.gz"
+
+        # 检查下载地址是否有效
+        if wget --spider "$ES_DOWNLOAD_URL" 2>&1 | grep -q '200'; then
+          cont "创建 ELK 用户"
+          # 用户名规则
+          while :; do
+            read -p "用户名(留空默认: elastic): " ESuserName
+            ESuserName="${ESuserName:-elastic}"
+            if [[ "$ESuserName" =~ .*root.* || "$ESuserName" =~ .*admin.* ]]; then
+              warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头, 请重新输入\n"
+            elif id -u "$ESuserName" >/dev/null 2>&1; then
+              warn "用户 \"$ESuserName\" 已存在，请重新输入\\n"
+            elif echo "$ESuserName" | grep -qP '[\p{Han}]'; then
+              warn "用户名不能包含<中文>, 请重新输入\n"
+            elif [ -z "$ESuserName" ]; then
+              warn "用户名不能为<空>, 请重新输入\n"
+            else
+              break
+            fi
+          done
+
+          # 密码规则确认
+          while :; do
+            read -rp "输入密码(密码输入已隐藏): " -s ESuserPass
+            echo ''
+            read -rp "再次确认密码: " -s ESuserPasswd
+            echo ''
+
+            if [ "$ESuserPass" != "$ESuserPasswd" ]; then
+              warn "两次密码验证失败，请重新输入\n"
+            elif [ -z "$ESuserPasswd" ]; then
+              warn "密码不能为<空>，请重新输入\n"
+            elif [[ ${#ESuserPass} -lt 8 || ! "$ESuserPass" =~ [A-Z] || ! "$ESuserPass" =~ [a-z] ]]; then
+              warn "密码必须至少8个字符，包括至少1个大写字母和1个小写字母，请重新输入\n"
+            else
+              break
+            fi
+          done
+
+          # 添加用户及密码
+          sudo useradd -m -s /bin/bash "$ESuserName"
+          if [[ "$OS" == *"Ubuntu"* ]]; then
+            sudo echo "$ESuserName:$ESuserPasswd" | sudo chpasswd >/dev/null 2>&1
+          else
+            sudo echo "$ESuserName" | passwd --stdin "$ESuserName" >/dev/null 2>&1
+          fi
+
+          success "ELK 用户 $ESuserName 创建完成"
+
+          cont "下载地址有效，开始下载 Elasticsearch $ES_VER..."
+          wget -P "$SOFT_DIR" "$ES_DOWNLOAD_URL"
+          success "下载完成，文件保存在 $SOFT_DIR"
+
+          # 解压下载的文件到 $ES_DIR
+          cont "开始解压文件到 $ES_DIR..."
+          tar -xzf "$SOFT_DIR/elasticsearch-$ES_VER-linux-x86_64.tar.gz" -C "$ES_DIR"
+          success "解压完成，Elasticsearch 已安装在 $ES_DIR"
+
+          ES_VER_DIR="$ES_BASE_DIR-$ES_VER"
+          ES_CONFIG_DIR="$ES_VER_DIR/config"
+          ES_BIN_DIR="$ES_VER_DIR/bin"
+          ES_CONFIG_FILE="$ES_CONFIG_DIR/elasticsearch.yml"
+
+          cont "正在修改 $ES_CONFIG_FILE 配置文件..."
+
+          # 确保文件内包含指定的注释行
+          grep -q "#node.name: node-1" "$ES_CONFIG_FILE" || echo "#node.name: node-1" >>"$ES_CONFIG_FILE"
+          grep -q "#path.data: /path/to/data" "$ES_CONFIG_FILE" || echo "#path.data: /path/to/data" >>"$ES_CONFIG_FILE"
+          grep -q "#path.logs: /path/to/logs" "$ES_CONFIG_FILE" || echo "#path.logs: /path/to/logs" >>"$ES_CONFIG_FILE"
+
+          # 在指定行下方添加相应的配置
+          sed -i "/#node.name: node-1/a ## elastic节点名字\nnode.name: node-1" "$ES_CONFIG_FILE"
+          sed -i "/#path.data: \/path\/to\/data/a ## 数据存放目录\npath.data: $ES_DATA_DIR" "$ES_CONFIG_FILE"
+          sed -i "/#path.logs: \/path\/to\/logs/a ## 日志存放目录\npath.logs: $ES_LOGS_DIR" "$ES_CONFIG_FILE"
+          sed -i "/#network.host:/a ## 对所有IP开放，可以根据需求修改\nnetwork.host: 0.0.0.0" "$ES_CONFIG_FILE"
+
+          success "$ES_CONFIG_FILE 配置文件修改完成."
+
+          # 修改 $ES_DATA_DIR 和 $ES_LOGS_DIR 文件夹的所有者为 $ESuserName
+          sudo chown -R "$ESuserName": "$ES_DIR"
+          success "已将 $ES_DIR 的所有者更改为 $ESuserName"
+
+          # 添加启动脚本
+          cont "正在添加 Elasticsearch 启动脚本..."
+          sudo tee /etc/systemd/system/elasticsearch.service >/dev/null <<EOF
+[Unit]
+Description=ElasticSearch
+After=network.target
+ 
+[Service]
+Type=simple
+User=$ESuserName
+Group=$ESuserName
+ExecStart=$ES_BIN_DIR/elasticsearch -d -p $ES_DATA_DIR/elasticsearch.pid
+ExecStop=$ES_BIN_DIR/elasticsearch stop
+PIDFile=$ES_DATA_DIR/elasticsearch.pid
+# 修改线程数限制
+LimitNPROC=65535
+# 修改文件描述符限制
+LimitNOFILE=65535
+ 
+[Install]
+WantedBy=multi-user.target
+EOF
+
+          success "Elasticsearch 启动脚本已成功添加到 /etc/systemd/system/elasticsearch.service."
+
+          # 重新加载 systemd 管理器配置
+          sudo systemctl daemon-reload
+
+          # 启动 Elasticsearch 服务
+          sleep 3
+          sudo systemctl start elasticsearch
+          sleep 3
+          sudo systemctl enable elasticsearch
+
+          success "Elasticsearch 服务已启动并设置为开机自启."
+
+          # 检查并更新 PATH
+          cont "正在检查 /etc/profile.d/es.sh 是否包含 Elasticsearch 的 bin 目录..."
+          sudo touch $ES_PROFILE_FILE
+
+          if ! grep -q "export PATH=.*$ES_BIN_DIR" "$ES_PROFILE_FILE"; then
+            echo "# Elasticsearch" | sudo tee -a "$ES_PROFILE_FILE" >/dev/null
+            echo "export PATH=\$PATH:$ES_BIN_DIR" | sudo tee -a "$ES_PROFILE_FILE" >/dev/null
+
+            # 重新加载环境变量
+            source $ES_PROFILE_FILE
+
+            success "已将 Elasticsearch 的 bin 目录添加到 PATH 中."
+            #cont "为 elastic 创建密码"
+            #elasticsearch-reset-password -u elastic -i
+
+          elif grep -q "$OLD_PATH_REGEX" "$ES_PROFILE_FILE"; then
+            CURRENT_VER=$(grep -oP "$ES_BASE_DIR-\K[0-9.]+" "$ES_PROFILE_FILE")
+
+            if [[ "$(printf '%s\n' "$CURRENT_VER" "$ES_VER" | sort -V | head -n1)" == "$CURRENT_VER" && "$CURRENT_VER" != "$ES_VER" ]]; then
+              sed -i "s|$ES_BASE_DIR-[0-9.]+/bin|$ES_BASE_DIR-$ES_VER/bin|g" "$ES_PROFILE_FILE"
+              success "已将 Elasticsearch 的版本从 $CURRENT_VER 更新到 $ES_VER。"
+            else
+              success "Elasticsearch 的版本已经是最新的 ($CURRENT_VER)。"
+            fi
+          else
+            warn "Elasticsearch 的 bin 目录已存在于 PATH 中。"
+          fi
+          # 可选：清理下载的压缩文件
+          #rm "$SOFT_DIR/elasticsearch-$ES_VER-linux-x86_64.tar.gz"
+          #success "已删除下载的压缩文件。"
+          break
+        else
+          warn "下载地址无效，请重新输入版本号。"
+        fi
+      else
+        warn "版本号格式不正确，请输入类似 '$DEFAULT_VERSION' 的格式。"
+      fi
+    done
+    ;;
+  2)
+    cont "安装 Logstash"
+    # 默认参数
+    LS_BASE_URL="https://mirrors.huaweicloud.com/logstash"
+    SOFT_DIR="/data/soft"
+    LS_DIR="/data/elk/ls"
+    LS_LOGS_DIR="$LS_DIR/logs"
+    LS_BASE_DIR="$LS_DIR/logstash"
+    LS_PROFILE_FILE="/etc/profile.d/ls.sh"
+
+    # 版本号格式正则表达式
+    VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
+
+    # 创建所需的目录
+    mkdir -p "$LS_DIR" "$LS_LOGS_DIR"
+
+    while :; do
+      # 提示用户输入版本号
+      read -rp "输入 Logstash 版本号(留空默认: $DEFAULT_VERSION): " LS_VER
+
+      # 如果用户没有输入版本号，则使用默认版本号
+      if [[ -z "$LS_VER" ]]; then
+        LS_VER="$DEFAULT_VERSION"
+      fi
+
+      # 检查版本号格式
+      if [[ "$LS_VER" =~ $VERSION_REGEX ]]; then
+        # 拼接下载地址
+        LS_DOWNLOAD_URL="$LS_BASE_URL/$DEFAULT_VERSION/logstash-$LS_VER-linux-x86_64.tar.gz"
+
+        # 检查下载地址是否有效
+        if wget --spider "$LS_DOWNLOAD_URL" 2>&1 | grep -q '200'; then
+          cont "下载地址有效，开始下载 Logstash $LS_VER..."
+          wget -P "$SOFT_DIR" "$LS_DOWNLOAD_URL"
+          success "下载完成，文件保存在 $SOFT_DIR"
+
+          # 解压下载的文件到 $LS_VER
+          cont "开始解压文件到 $LS_VER..."
+          tar -xzf "$SOFT_DIR/logstash-$LS_VER-linux-x86_64.tar.gz" -C "$LS_DIR"
+          success "解压完成，Logstash 已安装在 $LS_VER"
+
+          LS_VER_DIR="$LS_BASE_DIR-$LS_VER"
+          LS_CONFIG_DIR="$LS_DIR/conf.d"
+          LS_BIN_DIR="$LS_VER_DIR/bin"
+          LS_CONFIG_FILE="$LS_CONFIG_DIR/es.conf"
+
+          cont "正在修改 $LS_CONFIG_FILE 配置文件..."
+          mkdir -p $LS_CONFIG_DIR
+          sudo touch $LS_CONFIG_FILE
+          sudo tee $LS_CONFIG_FILE >/dev/null <<EOF
+input {
+  beats {
+    port => 5044
+  }
+  file {
+    path => "$LS_LOGS_DIR/test.log"
+    type => "system"
+    start_position => "beginning"
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["https://localhost:9200"]
+    user => "elastic"
+    password => "$ESuserPasswd"
+    index => "index-test"
+    cacert => "$LS_VER_DIR/config/certs/http_ca.crt"
+  }
+  stdout {
+    codec => rubydebug
+  }
+}
+EOF
+
+          success "$LS_CONFIG_FILE 配置文件修改完成."
+
+          # 修改 $LS_DATA_DIR 和 $LS_LOGS_DIR 文件夹的所有者为 $ESuserName
+          sudo chown -R "$ESuserName": "$LS_DIR"
+          success "已将 $LS_DIR 的所有者更改为 $ESuserName"
+
+          # 添加启动脚本
+          cont "正在添加 Logstash 启动脚本..."
+          sudo tee /etc/systemd/system/logstash.service >/dev/null <<EOF
+[Unit]
+Description=Logstash service
+After=network.target
+ 
+[Service]
+Type=simple
+User=$ESuserName
+Group=$ESuserName
+ExecStart=$LS_BIN_DIR/logstash -f $LS_CONFIG_FILE
+Restart=always
+ 
+[Install]
+WantedBy=multi-user.target
+EOF
+
+          success "Logstash 启动脚本已成功添加到 /etc/systemd/system/logstash.service."
+
+          # 重新加载 systemd 管理器配置
+          sudo systemctl daemon-reload
+
+          # 启动 Logstash 服务
+          sleep 3
+          sudo systemctl start logstash
+          sleep 3
+          sudo systemctl enable logstash
+
+          success "Logstash 服务已启动并设置为开机自启."
+          # 检查并更新 PATH
+          cont "正在检查 /etc/profile.d/ls.sh 是否包含 Logstash 的 bin 目录..."
+          sudo touch $LS_PROFILE_FILE
+
+          if ! grep -q "export PATH=.*$LS_BIN_DIR" "$LS_PROFILE_FILE"; then
+            echo "" | sudo tee -a "$LS_PROFILE_FILE" >/dev/null
+            echo "# Logstash" | sudo tee -a "$LS_PROFILE_FILE" >/dev/null
+            echo "export PATH=\$PATH:$LS_BIN_DIR" | sudo tee -a "$LS_PROFILE_FILE" >/dev/null
+
+            # 重新加载环境变量
+            source $LS_PROFILE_FILE
+
+            success "已将 Logstash 的 bin 目录添加到 PATH 中."
+
+          elif grep -q "$OLD_PATH_REGEX" "$LS_PROFILE_FILE"; then
+            CURRENT_VER=$(grep -oP "$LS_BASE_DIR-\K[0-9.]+" "$LS_PROFILE_FILE")
+
+            if [[ "$(printf '%s\n' "$CURRENT_VER" "$LS_VER" | sort -V | head -n1)" == "$CURRENT_VER" && "$CURRENT_VER" != "$LS_VER" ]]; then
+              sed -i "s|$LS_BASE_DIR-[0-9.]+/bin|$LS_BASE_DIR-$LS_VER/bin|g" "$LS_PROFILE_FILE"
+              success "已将 Logstash 的版本从 $CURRENT_VER 更新到 $LS_VER"
+            else
+              success "Logstash 的版本已经是最新的 ($CURRENT_VER)。"
+            fi
+          else
+            warn "Logstash 的 bin 目录已存在于 PATH 中。"
+          fi
+          # 可选：清理下载的压缩文件
+          #rm "$SOFT_DIR/logstash-$ES_VER-linux-x86_64.tar.gz"
+          #success "已删除下载的压缩文件。"
+          break
+        else
+          warn "下载地址无效，请重新输入版本号。"
+        fi
+      else
+        warn "版本号格式不正确，请输入类似 '$DEFAULT_VERSION' 的格式。"
+      fi
+    done
+    ;;
+  3)
+    cont "安装 Kibana"
+    # 默认参数
+    KB_BASE_URL="https://mirrors.huaweicloud.com/kibana"
+    SOFT_DIR="/data/soft"
+    KB_DIR="/data/elk/kb"
+    KB_DATA_DIR="$KB_DIR/data"
+    KB_LOGS_DIR="$KB_DIR/logs"
+    KB_BASE_DIR="$KB_DIR/kibana"
+
+    # 版本号格式正则表达式
+    VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
+
+    # 创建所需的目录
+    mkdir -p "$KB_DIR" "$KB_LOGS_DIR" "$KB_DATA_DIR"
+
+    while :; do
+      # 提示用户输入版本号
+      read -rp "输入 Kibana 版本号(留空默认: $DEFAULT_VERSION): " KB_VER
+
+      # 如果用户没有输入版本号，则使用默认版本号
+      if [[ -z "$KB_VER" ]]; then
+        KB_VER="$DEFAULT_VERSION"
+      fi
+
+      # 检查版本号格式
+      if [[ "$KB_VER" =~ $VERSION_REGEX ]]; then
+        # 拼接下载地址
+        KB_DOWNLOAD_URL="$KB_BASE_URL/$DEFAULT_VERSION/kibana-$KB_VER-linux-x86_64.tar.gz"
+
+        # 检查下载地址是否有效
+        if wget --spider "$KB_DOWNLOAD_URL" 2>&1 | grep -q '200'; then
+          cont "下载地址有效，开始下载 Kibana $KB_VER..."
+          wget -P "$SOFT_DIR" "$KB_DOWNLOAD_URL"
+          success "下载完成，文件保存在 $SOFT_DIR"
+
+          # 解压下载的文件到 $KB_VER
+          cont "开始解压文件到 $KB_VER..."
+          tar -xzf "$SOFT_DIR/kibana-$KB_VER-linux-x86_64.tar.gz" -C "$KB_DIR"
+          success "解压完成, Kibana 已安装在 $KB_VER"
+
+          KB_VER_DIR="$KB_BASE_DIR-$KB_VER"
+          KB_CONFIG_DIR="$KB_VER_DIR/config"
+          KB_BIN_DIR="$KB_VER_DIR/bin"
+          KB_CONFIG_FILE="$KB_CONFIG_DIR/kibana.yml"
+
+          cont "设置 Kibana 访问端口..."
+          while :; do
+            read -rp "请输入 Kibana 访问端口(留空默认: 5601): " KB_Port
+            KB_Port="${KB_Port:-5601}"
+
+            if [[ ! $KB_Port =~ ^[0-9]+$ ]]; then
+              warn "端口仅支持数字，请重新输入!"
+            #elif [ "$sshPort" -lt "1024" ]; then
+            #  warn "端口号不能小于 1024，请重新输入!"
+            elif [ "$KB_Port" -gt "65535" ]; then
+              warn "端口号不能大于 65535，请重新输入!"
+            else
+              break
+            fi
+          done
+
+          cont "设置 Kibana 访问地址..."
+
+          read -rp "请输入 Kibana 访问地址(留空默认: 0.0.0.0): " KB_Host
+          KB_Host="${KB_Host:-0.0.0.0}"
+
+          cont "正在修改 $KB_CONFIG_FILE 配置文件..."
+
+          # 确保文件内包含指定的注释行
+          grep -q "#server.port: 5601" "$KB_CONFIG_FILE" || echo "#server.port: 5601" >>"$KB_CONFIG_FILE"
+          grep -q "#server.host: \"localhost\"" "$KB_CONFIG_FILE" || echo "#server.host: \"localhost\"" >>"$KB_CONFIG_FILE"
+          grep -q "#path.data: data" "$KB_CONFIG_FILE" || echo "#path.data: data" >>"$KB_CONFIG_FILE"
+          grep -q "#i18n.locale: \"en\"" "$KB_CONFIG_FILE" || echo "#i18n.locale: \"en\"" >>"$KB_CONFIG_FILE"
+
+          # 在指定行下方添加相应的配置
+          sed -i "/#server.port: 5601/a ## 访问端口\nserver.port: $KB_Port" "$KB_CONFIG_FILE"
+          sed -i "/#server.host: \"localhost\"/a ## 访问地址\nserver.host: \"$KB_Host\"" "$KB_CONFIG_FILE"
+          sed -i "/#path.data: data/a ## 数据存放目录\npath.data: $KB_DATA_DIR" "$KB_CONFIG_FILE"
+          sed -i "/#i18n.locale: \"en\"/a ## 使用中文语言\n#i18n.locale: \"zh-CN\"" "$KB_CONFIG_FILE"
+
+          success "$KB_CONFIG_FILE 配置文件修改完成."
+
+          # 修改 $KB_DATA_DIR 和 $KB_LOGS_DIR 文件夹的所有者为 $ESuserName
+          sudo chown -R "$ESuserName": "$KB_DIR"
+          success "已将 $KB_DIR 的所有者更改为 $ESuserName"
+
+          # 添加启动脚本
+          cont "正在添加 Kibana 启动脚本..."
+          sudo tee /etc/systemd/system/kibana.service >/dev/null <<EOF
+[Unit]
+Description=Kibana service
+After=network.target
+ 
+[Service]
+Type=simple
+User=$ESuserName
+Group=$ESuserName
+ExecStart=$KB_BIN_DIR/kibana
+Restart=always
+ 
+[Install]
+WantedBy=multi-user.target
+EOF
+
+          success "Kibana 启动脚本已成功添加到 /etc/systemd/system/kibana.service."
+
+          # 重新加载 systemd 管理器配置
+          sudo systemctl daemon-reload
+
+          # 启动 Kibana 服务
+          sleep 3
+          sudo systemctl start kibana
+          sleep 3
+          sudo systemctl enable kibana
+
+          success "Kibana 服务已启动并设置为开机自启."
+          
+          # 可选：清理下载的压缩文件
+          #rm "$SOFT_DIR/logstash-$ES_VER-linux-x86_64.tar.gz"
+          #success "已删除下载的压缩文件。"
+          break
+        else
+          warn "下载地址无效，请重新输入版本号。"
+        fi
+      else
+        warn "版本号格式不正确，请输入类似 '$DEFAULT_VERSION' 的格式。"
+      fi
+    done
+    ;;
+  esac
+}
+
 finish() {
   msg "${C06} 
  当前系统时间：${C3}$(date)${C06}
@@ -2337,8 +2867,14 @@ main() {
     "source docker")
       changeSourceForChina 3
       ;;
-    "key")
+    "user add")
+      create_new_user 1
+      ;;
+    "user key")
       create_new_user 2
+      ;;
+    "user nologin")
+      create_new_user 3
       ;;
     "nginx")
       install_nginx
@@ -2393,6 +2929,11 @@ main() {
       ;;
     "docker docker-ce")
       dockerDevelopEnv 1
+      ;;
+    "elk")
+      Install_elk 1
+      Install_elk 2
+      Install_elk 3
       ;;
     "docker docker-compose")
       dockerDevelopEnv 2
