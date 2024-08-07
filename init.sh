@@ -1126,6 +1126,45 @@ EOF
   fi
 }
 
+# 修改主机名
+Set_Hostname () {
+  info "设置服务器主机名..."
+  get_and_confirm_hostname() {
+    local hostname
+    read -p "请输入新的主机名: " hostname
+    read -p "请再次输入新的主机名以确认: " confirm_hostname
+
+    if [ "$hostname" != "$confirm_hostname" ]; then
+        warn "两次输入的主机名不一致，请重新输入。"
+        return 1
+    else
+        success "主机名确认一致: $hostname"
+        echo "$hostname"
+        return 0
+    fi
+}
+
+# Attempt to get and confirm the hostname up to 3 times
+attempt=0
+max_attempts=3
+while [ $attempt -lt $max_attempts ]; do
+    if hostname=$(get_and_confirm_hostname); then
+        break
+    fi
+    attempt=$((attempt + 1))
+    if [ $attempt -eq $max_attempts ]; then
+        error "多次输入的主机名不一致，脚本退出。"
+    fi
+done
+
+# Set the new hostname
+sudo hostnamectl set-hostname "$hostname"
+if [ $? -eq 0 ]; then
+    success "主机名已成功更改为: $hostname"
+else
+    warn "更改主机名失败。"
+fi
+}
 # 安装 Nginx
 install_nginx() {
   info "*** 安装 Nginx ***"
@@ -2878,6 +2917,9 @@ main() {
       ;;
     "user nologin")
       create_new_user 3
+      ;;
+    "hostname")
+      Set_Hostname
       ;;
     "nginx")
       install_nginx
