@@ -1127,7 +1127,7 @@ EOF
 }
 
 # 修改主机名
-Set_Hostname () {
+Set_Hostname() {
   info "设置服务器主机名..."
   get_and_confirm_hostname() {
     local hostname
@@ -1135,35 +1135,35 @@ Set_Hostname () {
     read -p "请再次输入新的主机名以确认: " confirm_hostname
 
     if [ "$hostname" != "$confirm_hostname" ]; then
-        warn "两次输入的主机名不一致，请重新输入。"
-        return 1
+      warn "两次输入的主机名不一致，请重新输入。"
+      return 1
     else
-        success "主机名确认一致: $hostname"
-        echo "$hostname"
-        return 0
+      success "主机名确认一致: $hostname"
+      echo "$hostname"
+      return 0
     fi
-}
+  }
 
-# Attempt to get and confirm the hostname up to 3 times
-attempt=0
-max_attempts=3
-while [ $attempt -lt $max_attempts ]; do
+  # Attempt to get and confirm the hostname up to 3 times
+  attempt=0
+  max_attempts=3
+  while [ $attempt -lt $max_attempts ]; do
     if hostname=$(get_and_confirm_hostname); then
-        break
+      break
     fi
     attempt=$((attempt + 1))
     if [ $attempt -eq $max_attempts ]; then
-        error "多次输入的主机名不一致，脚本退出。"
+      error "多次输入的主机名不一致，脚本退出。"
     fi
-done
+  done
 
-# Set the new hostname
-sudo hostnamectl set-hostname "$hostname"
-if [ $? -eq 0 ]; then
+  # Set the new hostname
+  sudo hostnamectl set-hostname "$hostname"
+  if [ $? -eq 0 ]; then
     success "主机名已成功更改为: $hostname"
-else
+  else
     warn "更改主机名失败。"
-fi
+  fi
 }
 # 安装 Nginx
 install_nginx() {
@@ -2698,7 +2698,7 @@ EOF
           sudo systemctl enable kibana
 
           success "Kibana 服务已启动并设置为开机自启."
-          
+
           # 可选：清理下载的压缩文件
           #rm "$SOFT_DIR/logstash-$ES_VER-linux-x86_64.tar.gz"
           #success "已删除下载的压缩文件。"
@@ -2920,6 +2920,15 @@ main() {
       ;;
     "hostname")
       Set_Hostname
+      printf "\n\n系统主机名设置完成, 是否立即重启服务器?[y/n]"
+      read -p ": " is_reboot
+      while [[ ! $is_reboot =~ ^[y,n]$ ]]; do
+        warn "输入有误, 只能输入[y/n]"
+        read -p "[y/n]: " is_reboot
+      done
+      if [ "$is_reboot" = 'y' ]; then
+        sudo reboot
+      fi
       ;;
     "nginx")
       install_nginx
