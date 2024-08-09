@@ -2405,7 +2405,7 @@ EOF
 
             # 重新加载环境变量
             source $ES_PROFILE_FILE
-            
+
             #cont "为 elastic 创建密码"
             #elasticsearch-reset-password -u elastic -i
 
@@ -2736,7 +2736,7 @@ EOF
 
           msg "\n使用命令生成 Kibana 令牌: \nelasticsearch-create-enrollment-token -s kibana\n"
           msg "\n使用命令获取 Kibana 验证码: \nkibana-verification-code"
-          
+
           break
         else
           warn "下载地址无效，请重新输入版本号。"
@@ -2747,10 +2747,6 @@ EOF
     done
     ;;
   esac
-}
-
-Install_Filebeat () {
-  info "安装 Filebeat "
 }
 
 finish() {
@@ -3039,7 +3035,7 @@ main() {
       ;;
     "filebeat")
       Install_Filebeat
-    ;;
+      ;;
     --basic | -b)
       basic_tools_install
       ;;
