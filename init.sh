@@ -2920,7 +2920,7 @@ main() {
       ;;
     "hostname")
       Set_Hostname
-      printf "\n\n系统主机名设置完成, 是否立即重启服务器?[y/n]"
+      printf "\n系统主机名设置完成, 是否立即重启服务器?[y/n]"
       read -p ": " is_reboot
       while [[ ! $is_reboot =~ ^[y,n]$ ]]; do
         warn "输入有误, 只能输入[y/n]"
