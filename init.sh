@@ -2246,7 +2246,7 @@ Install_elk() {
     cont "安装 Elasticsearch"
     # 默认参数
     ES_BASE_URL="https://mirrors.huaweicloud.com/elasticsearch"
-    SOFT_DIR="/data/soft"
+    SOFT_DIR="/data/soft/elk"
     ES_DIR="/data/elk/es"
     ES_BASE_DIR="/data/elk/es/elasticsearch"
     ES_DATA_DIR="$ES_DIR/data"
@@ -2401,10 +2401,11 @@ EOF
             echo "# Elasticsearch" | sudo tee -a "$ES_PROFILE_FILE" >/dev/null
             echo "export PATH=\$PATH:$ES_BIN_DIR" | sudo tee -a "$ES_PROFILE_FILE" >/dev/null
 
+            success "已将 Elasticsearch 的 bin 目录添加到 PATH 中."
+
             # 重新加载环境变量
             source $ES_PROFILE_FILE
-
-            success "已将 Elasticsearch 的 bin 目录添加到 PATH 中."
+            
             #cont "为 elastic 创建密码"
             #elasticsearch-reset-password -u elastic -i
 
@@ -2436,7 +2437,7 @@ EOF
     cont "安装 Logstash"
     # 默认参数
     LS_BASE_URL="https://mirrors.huaweicloud.com/logstash"
-    SOFT_DIR="/data/soft"
+    SOFT_DIR="/data/soft/elk"
     LS_DIR="/data/elk/ls"
     LS_LOGS_DIR="$LS_DIR/logs"
     LS_BASE_DIR="$LS_DIR/logstash"
@@ -2585,11 +2586,12 @@ EOF
     cont "安装 Kibana"
     # 默认参数
     KB_BASE_URL="https://mirrors.huaweicloud.com/kibana"
-    SOFT_DIR="/data/soft"
+    SOFT_DIR="/data/soft/elk"
     KB_DIR="/data/elk/kb"
     KB_DATA_DIR="$KB_DIR/data"
     KB_LOGS_DIR="$KB_DIR/logs"
     KB_BASE_DIR="$KB_DIR/kibana"
+    KB_PROFILE_FILE="/etc/profile.d/kb.sh"
 
     # 版本号格式正则表达式
     VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
@@ -2660,7 +2662,7 @@ EOF
           sed -i "/#server.port: 5601/a ## 访问端口\nserver.port: $KB_Port" "$KB_CONFIG_FILE"
           sed -i "/#server.host: \"localhost\"/a ## 访问地址\nserver.host: \"$KB_Host\"" "$KB_CONFIG_FILE"
           sed -i "/#path.data: data/a ## 数据存放目录\npath.data: $KB_DATA_DIR" "$KB_CONFIG_FILE"
-          sed -i "/#i18n.locale: \"en\"/a ## 使用中文语言\n#i18n.locale: \"zh-CN\"" "$KB_CONFIG_FILE"
+          sed -i "/#i18n.locale: \"en\"/a ## 使用中文语言\ni18n.locale: \"zh-CN\"" "$KB_CONFIG_FILE"
 
           success "$KB_CONFIG_FILE 配置文件修改完成."
 
@@ -2699,12 +2701,42 @@ EOF
 
           success "Kibana 服务已启动并设置为开机自启."
 
+          # 检查并更新 PATH
+          cont "正在检查 /etc/profile.d/kb.sh 是否包含 Elasticsearch 的 bin 目录..."
+          sudo touch $KB_PROFILE_FILE
+
+          if ! grep -q "export PATH=.*$KB_BIN_DIR" "$KB_PROFILE_FILE"; then
+            echo "# Kibana" | sudo tee -a "$KB_PROFILE_FILE" >/dev/null
+            echo "export PATH=\$PATH:$KB_BIN_DIR" | sudo tee -a "$KB_PROFILE_FILE" >/dev/null
+
+            success "已将 Kibana 的 bin 目录添加到 PATH 中."
+
+            # 重新加载环境变量
+            source $KB_PROFILE_FILE
+
+          elif grep -q "$OLD_PATH_REGEX" "$KB_PROFILE_FILE"; then
+            CURRENT_VER=$(grep -oP "$KB_BASE_DIR-\K[0-9.]+" "$KB_PROFILE_FILE")
+
+            if [[ "$(printf '%s\n' "$CURRENT_VER" "$ES_VER" | sort -V | head -n1)" == "$CURRENT_VER" && "$CURRENT_VER" != "$ES_VER" ]]; then
+              sed -i "s|$KB_BASE_DIR-[0-9.]+/bin|$KB_BASE_DIR-$KB_VER/bin|g" "$KB_PROFILE_FILE"
+              success "已将 Kibana 的版本从 $CURRENT_VER 更新到 $ES_VER。"
+            else
+              success "Kibana 的版本已经是最新的 ($CURRENT_VER)。"
+            fi
+          else
+            warn "Kibana 的 bin 目录已存在于 PATH 中。"
+          fi
+
           # 可选：清理下载的压缩文件
           #rm "$SOFT_DIR/logstash-$ES_VER-linux-x86_64.tar.gz"
           #success "已删除下载的压缩文件。"
 
           cont "为 elastic 创建密码"
           elasticsearch-reset-password -u elastic -i
+
+          msg "\n使用命令生成 Kibana 令牌: \nelasticsearch-create-enrollment-token -s kibana\n"
+          msg "\n使用命令获取 Kibana 验证码: \nkibana-verification-code"
+          
           break
         else
           warn "下载地址无效，请重新输入版本号。"
@@ -2715,6 +2747,10 @@ EOF
     done
     ;;
   esac
+}
+
+Install_Filebeat () {
+  info "安装 Filebeat "
 }
 
 finish() {
@@ -2986,12 +3022,24 @@ main() {
       ;;
     "elk")
       Install_elk 1
-      Install_elk 2
+      #Install_elk 2
       Install_elk 3
+      printf "\nELK 安装完成, 是否立即重启服务器?[y/n]"
+      read -p ": " is_reboot
+      while [[ ! $is_reboot =~ ^[y,n]$ ]]; do
+        warn "输入有误, 只能输入[y/n]"
+        read -p "[y/n]: " is_reboot
+      done
+      if [ "$is_reboot" = 'y' ]; then
+        sudo reboot
+      fi
       ;;
     "docker docker-compose")
       dockerDevelopEnv 2
       ;;
+    "filebeat")
+      Install_Filebeat
+    ;;
     --basic | -b)
       basic_tools_install
       ;;
