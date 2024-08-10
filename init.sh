@@ -3305,7 +3305,7 @@ EOF
       # 检查版本号格式
       if [[ "$FRPC_VER" =~ $VERSION_REGEX ]]; then
         # 拼接下载地址
-        FRPC_BASE_URL="https://github.com/fatedier/$SOFTWARW_NAME/releases/download/v$FRPC_VER"
+        FRPC_BASE_URL="https://gitee.com/davymai/$SOFTWARW_NAME/raw/master/$FRPC_VER"
         FRPC_FILENAME="${SOFTWARW_NAME}_${FRPC_VER}_linux_amd64.tar.gz"
         FRPC_DL_URL="$FRPC_BASE_URL/$FRPC_FILENAME"
 
