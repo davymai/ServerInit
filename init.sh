@@ -3104,7 +3104,7 @@ Install_frp() {
       # 检查版本号格式
       if [[ "$FRPS_VER" =~ $VERSION_REGEX ]]; then
         # 拼接下载地址
-        FRPS_BASE_URL="https://github.com/fatedier/$SOFTWARW_NAME/releases/download/v$FRPS_VER"
+        FRPS_BASE_URL="https://gitee.com/davymai/$SOFTWARW_NAME/raw/master/$FRPS_VER"
         FRPS_FILENAME="${SOFTWARW_NAME}_${FRPS_VER}_linux_amd64.tar.gz"
         FRPS_DL_URL="$FRPS_BASE_URL/$FRPS_FILENAME"
 
