@@ -596,7 +596,7 @@ create_new_user() {
     while :; do
       read -p "用户名: " userName
       if [[ "$userName" =~ .*root.* || "$userName" =~ .*admin.* ]]; then
-        warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头，请重新输入\n"
+        warn "用户名不能包含 ${C01}admin${CF} 或 ${C01}root${CF} ，请重新输入\n"
       elif id -u "$userName" >/dev/null 2>&1; then
         warn "用户 \"$userName\" 已存在，请重新输入\\n"
       elif echo "$userName" | grep -qP '[\p{Han}]'; then
@@ -757,7 +757,7 @@ create_new_user() {
     while :; do
       read -p "用户名: " userName
       if [[ "$userName" =~ .*root.* || "$userName" =~ .*admin.* ]]; then
-        warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头，请重新输入\n"
+        warn "用户名不能包含 ${C01}admin${CF} 或 ${C01}root${CF} ，请重新输入\n"
       elif id -u "$userName" >/dev/null 2>&1; then
         warn "用户 \"$userName\" 已存在，请重新输入\\n"
       elif echo "$userName" | grep -qP '[\p{Han}]'; then
@@ -2382,7 +2382,7 @@ Install_elk() {
             read -p "用户名(留空默认: elastic): " ESuserName
             ESuserName="${ESuserName:-elastic}"
             if [[ "$ESuserName" =~ .*root.* || "$ESuserName" =~ .*admin.* ]]; then
-              warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头，请重新输入\n"
+              warn "用户名不能包含 ${C01}admin${CF} 或 ${C01}root${CF} ，请重新输入\n"
             elif id -u "$ESuserName" >/dev/null 2>&1; then
               warn "用户 \"$ESuserName\" 已存在，请重新输入\\n"
             elif echo "$ESuserName" | grep -qP '[\p{Han}]'; then
@@ -2581,7 +2581,7 @@ EOF
             read -p "输入 Elasticsearch 用户名(留空默认: elastic): " ESuserName
             ESuserName="${ESuserName:-elastic}"
             if [[ "$ESuserName" =~ .*root.* || "$ESuserName" =~ .*admin.* ]]; then
-              warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头，请重新输入\n"
+              warn "用户名不能包含 ${C01}admin${CF} 或 ${C01}root${CF} ，请重新输入\n"
             elif ! id "$ESuserName" &>/dev/null; then
               warn "用户 $ESuserName 不存在，请重新输入\n"
             elif echo "$ESuserName" | grep -qP '[\p{Han}]'; then
@@ -2775,7 +2775,7 @@ EOF
             read -p "输入 Elasticsearch 用户名(留空默认: elastic): " ESuserName
             ESuserName="${ESuserName:-elastic}"
             if [[ "$ESuserName" =~ .*root.* || "$ESuserName" =~ .*admin.* ]]; then
-              warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头，请重新输入\n"
+              warn "用户名不能包含 ${C01}admin${CF} 或 ${C01}root${CF} ，请重新输入\n"
             elif ! id "$ESuserName" &>/dev/null; then
               warn "用户 $ESuserName 不存在，请重新输入\n"
             elif echo "$ESuserName" | grep -qP '[\p{Han}]'; then
@@ -3104,22 +3104,14 @@ Install_frp() {
       # 检查版本号格式
       if [[ "$FRPS_VER" =~ $VERSION_REGEX ]]; then
         # 拼接下载地址
-        FRPS_BASE_URL="https://gitee.com/davymai/$SOFTWARW_NAME/raw/master/$FRPS_VER"
+        FRPS_BASE_URL="https://gh.api.99988866.xyz/https://github.com/fatedier/$SOFTWARW_NAME/releases/download/v$FRPS_VER"
         FRPS_FILENAME="${SOFTWARW_NAME}_${FRPS_VER}_linux_amd64.tar.gz"
         FRPS_DL_URL="$FRPS_BASE_URL/$FRPS_FILENAME"
 
         # 检查下载地址是否有效
         if wget --spider "$FRPS_DL_URL" 2>&1 | grep -q '200'; then
-          cont "下载地址有效，开始下载 frp $FRPS_VER..."
-          wget -P "$FRPS_DL_DIR" "$FRPS_DL_URL"
-          success "下载完成，文件保存在 $FRPS_DL_DIR"
 
-          # 解压下载的文件到 $FRPS_INSTALL_DIR
-          cont "开始解压文件到 $FRPS_INSTALL_DIR..."
-          tar -xzf "$FRPS_DL_DIR/$FRPS_FILENAME" -C "$FRPS_INSTALL_DIR"
-          success "frp 已安装在 $FRPS_INSTALL_DIR"
-
-          cont "设置 frp 访问端口..."
+          cont "下载地址有效，设置 frp 访问端口..."
           while :; do
             read -rp "请输入 frp 访问端口(留空默认: 7999): " FRPS_Port
             FRPS_Port="${FRPS_Port:-7999}"
@@ -3166,7 +3158,7 @@ Install_frp() {
             read -p "输入 frp 后台管理员用户名(留空默认: frpadmin): " FRPS_Admin
             FRPS_Admin="${FRPS_Admin:-frpadmin}"
             if [[ "$FRPS_Admin" =~ .*root.* || "$FRPS_Admin" =~ .*admin.* ]]; then
-              warn "用户名不能以 ${C01}admin${CF} 或 ${C01}root${CF} 开头，请重新输入\n"
+              warn "用户名不能包含 ${C01}admin${CF} 或 ${C01}root${CF} ，请重新输入\n"
             elif echo "$FRPS_Admin" | grep -qP '[\p{Han}]'; then
               warn "用户名不能包含<中文>，请重新输入\n"
             elif [ -z "$FRPS_Admin" ]; then
@@ -3197,6 +3189,15 @@ Install_frp() {
               break
             fi
           done
+
+          cont "开始下载 frp $FRPS_VER..."
+          wget -P "$FRPS_DL_DIR" "$FRPS_DL_URL"
+          success "下载完成，文件保存在 $FRPS_DL_DIR"
+
+          # 解压下载的文件到 $FRPS_INSTALL_DIR
+          cont "开始解压文件到 $FRPS_INSTALL_DIR..."
+          tar -xzf "$FRPS_DL_DIR/$FRPS_FILENAME" -C "$FRPS_INSTALL_DIR"
+          success "frp 已安装在 $FRPS_INSTALL_DIR"
 
           FRPS_SOFT_DIR="$FRPS_INSTALL_DIR/${SOFTWARW_NAME}_${FRPS_VER}_linux_amd64"
           mv $FRPS_SOFT_DIR $FRPS_INSTALL_DIR/frps
@@ -3305,24 +3306,16 @@ EOF
       # 检查版本号格式
       if [[ "$FRPC_VER" =~ $VERSION_REGEX ]]; then
         # 拼接下载地址
-        FRPC_BASE_URL="https://gitee.com/davymai/$SOFTWARW_NAME/raw/master/$FRPC_VER"
+        FRPC_BASE_URL="https://gh.api.99988866.xyz/https://github.com/fatedier/$SOFTWARW_NAME/releases/download/v$FRPC_VER"
         FRPC_FILENAME="${SOFTWARW_NAME}_${FRPC_VER}_linux_amd64.tar.gz"
         FRPC_DL_URL="$FRPC_BASE_URL/$FRPC_FILENAME"
 
         # 检查下载地址是否有效
         if wget --spider "$FRPC_DL_URL" 2>&1 | grep -q '200'; then
-          cont "下载地址有效，开始下载 frp $FRPC_VER..."
-          wget -P "$FRPC_DL_DIR" "$FRPC_DL_URL"
-          success "下载完成，文件保存在 $FRPC_DL_DIR"
 
-          # 解压下载的文件到 $FRPC_INSTALL_DIR
-          cont "开始解压文件到 $FRPC_INSTALL_DIR..."
-          tar -xzf "$FRPC_DL_DIR/$FRPC_FILENAME" -C "$FRPC_INSTALL_DIR"
-          success "frpc 已安装在 $FRPC_INSTALL_DIR"
-
-          cont "设置 frps 访问端口..."
+          cont "下载地址有效，设置 frp 服务器 访问端口..."
           while :; do
-            read -rp "请输入 frps 访问端口(留空默认: 7999): " FRPC_SPort
+            read -rp "请输入 frp 服务器访问端口(留空默认: 7999): " FRPC_SPort
             FRPC_SPort="${FRPC_SPort:-7999}"
             if [[ ! $FRPC_SPort =~ ^[0-9]+$ ]]; then
               warn "端口仅支持数字，请重新输入!"
@@ -3335,26 +3328,23 @@ EOF
             fi
           done
 
-          cont "设置 frp 后台访问地址..."
-          IP_REGEX="^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$"
-          while :; do
-            read -rp "请输入 frp 后台访问地址(留空默认: 0.0.0.0): " FRPC_SHost
-            FRPC_SHost="${FRPC_SHost:-0.0.0.0}"
-            if [[ ! $FRPC_SHost =~ $IP_REGEX ]]; then
-              warn "IP地址格式不正确，请重新输入!"
-            else
-              break
-            fi
-          done
+          cont "开始下载 frp $FRPC_VER..."
+          wget -P "$FRPC_DL_DIR" "$FRPC_DL_URL"
+          success "下载完成，文件保存在 $FRPC_DL_DIR"
+
+          # 解压下载的文件到 $FRPC_INSTALL_DIR
+          cont "开始解压文件到 $FRPC_INSTALL_DIR..."
+          tar -xzf "$FRPC_DL_DIR/$FRPC_FILENAME" -C "$FRPC_INSTALL_DIR"
+          success "frpc 已安装在 $FRPC_INSTALL_DIR"
 
           FRPC_SOFT_DIR="$FRPC_INSTALL_DIR/${SOFTWARW_NAME}_${FRPC_VER}_linux_amd64"
-          mv $FRPS_SOFT_DIR $FRPC_INSTALL_DIR/frpc
+          mv $FRPC_SOFT_DIR $FRPC_INSTALL_DIR/frpc
           FRPC_HOME_DIR="$FRPC_INSTALL_DIR/frpc"
           rm -rf $FRPC_HOME_DIR/frps*
           FRPC_BIN_DIR="$FRPC_HOME_DIR"
           FPRC_CONFIG_FILE="$FRPC_HOME_DIR/frpc.toml"
 
-          cont "正在修改 frp 服务端 $FPRC_CONFIG_FILE 配置文件..."
+          cont "正在修改 frp 客户端 $FPRC_CONFIG_FILE 配置文件..."
 
           # 确保文件内包含指定的行
           cat /dev/null >$FPRC_CONFIG_FILE
@@ -3716,10 +3706,10 @@ main() {
         sudo reboot
       fi
       ;;
-      "frps")
+    "frps")
       Install_frp 1
       ;;
-      "frpc")
+    "frpc")
       Install_frp 2
       ;;
     "docker docker-compose")
