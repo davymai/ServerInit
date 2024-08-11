@@ -11,11 +11,25 @@
 #################################################
 
 # 初始化脚本设置 {{{
+
 # 脚本版本
-scriptdate='2024-07-03'
-VERSION='0.3.2'
+SCRIPT_DATE='2024-07-03'
+SCRIPT_VERSION='0.3.2'
 # 版本号格式正则表达式
 VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
+
+# 设置严格模式
+set -eo pipefail # -e: 当命令失败时退出; -o pipefail: 管道中任何命令失败时返回非零状态
+
+# 定义常量
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" # 脚本所在目录
+readonly LOG_FILE="${SCRIPT_DIR}/init.log"                          # 日志文件路径
+
+# 函数: 日志记录
+log() {
+  local message="\$1"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - ${message}" >>"${LOG_FILE}"
+}
 
 # 1. 检测系统类型
 source /etc/os-release
@@ -29,12 +43,19 @@ if [ "$NTP_STATUS" != "yes" ]; then
   echo "NTP 服务未启用。设置时区和时间。"
   if [[ "$OS" != **"CentOS"** ]]; then
     # 获取当前 RTC 时间
-    rtc_time=$(timedatectl | awk '/RTC time/ {print $4, $5}')
-    # 计算中国标准时间 (CST)
-    cn_time=$(date -d "$rtc_time 8 hours" +"%Y-%m-%d %H:%M:%S")
-    # 设置系统时间为中国标准时间
-    sudo timedatectl set-time "$cn_time"
-    echo "时区已设置为中国标准时间 (CST)。"
+    RTC_TIME=$(timedatectl | awk '/RTC time/ {print $4, $5}')
+    # 检查 RTC_TIME 是否成功获取
+    if [ -n "$RTC_TIME" ]; then
+      # 计算中国标准时间 (CST)
+      CN_TIME=$(date -d "$RTC_TIME + 8 hours" +"%Y-%m-%d %H:%M:%S")
+      # 设置系统时间为中国标准时间
+      sudo timedatectl set-time "$CN_TIME"
+      echo "时区已设置为中国标准时间 (CST)。"
+    fi
+    # 获取当前日期
+    if [ -n "$RTC_TIME" ]; then
+      CURRENT_DATE=$(date -d "$RTC_TIME + 8 hours" +"%Y%m%d")
+    fi
   fi
 fi
 
@@ -62,9 +83,6 @@ source_directory="/etc/yum.repos.d"
 
 # 7. 设置备份目标目录路径
 backup_directory="/etc/yum.repos.d/backup"
-
-# 8. 获取当前日期
-current_date=$(date -d "$rtc_time 8 hours" +"%Y%m%d")
 
 # 9. 获取IP地址
 #外网IP地址
@@ -146,7 +164,7 @@ welcome() {
 
         ${C7}系统默认${SS}${C1}禁止${C7}密码登陆，请提前准备好公钥${C06}
 
-        Version: ${VERSION}    Update: ${scriptdate}
+        Version: ${SCRIPT_VERSION}    Update: ${SCRIPT_DATE}
         By: 大威(Davy)    System: ${C2}${OS} ${C05}${OS_VER}
         ${CF}"
 }
@@ -167,15 +185,30 @@ CD() {
 }
 
 cmdCheck() {
-  if ! hash "$1" >/dev/null 2>&1 && [[ "$OS" == **"Rocky"** ]]; then
-    error "Command [${C1}${1}${CF}] not found，请先安装 ${1} 再运行脚本。\n\n安装命令: \nsudo dnf install -y ${1}\n"
-    return 1
-  elif ! hash "$1" >/dev/null 2>&1 && [[ "$OS" == **"CentOS"** ]]; then
-    error "Command [${C1}${1}${CF}] not found，请先安装 ${1} 再运行脚本。\n\n安装命令: \nsudo yum install -y ${1}\n"
-    return 1
-  elif ! hash "$1" >/dev/null 2>&1 && [[ "$OS" == **"Ubuntu"** ]]; then
-    error "Command [${C1}${1}${CF}] not found，请先安装 ${1} 再运行脚本。\n\n安装命令: \nsudo apt-get install -y ${1}\n"
-    return 0
+  # 检查命令是否存在
+  if ! hash "$1" >/dev/null 2>&1; then
+    info "命令 $1 未找到，正在尝试安装...\n"
+    # 根据操作系统类型进行安装
+    if ! hash "$1" >/dev/null 2>&1 && [[ "$OS" == **"Rocky"** ]]; then
+      sudo dnf install -y $1
+    elif ! hash "$1" >/dev/null 2>&1 && [[ "$OS" == **"CentOS"** ]]; then
+      sudo yum install -y $1
+    elif ! hash "$1" >/dev/null 2>&1 && [[ "$OS" == **"Ubuntu"** ]]; then
+      sudo apt-get install -y $1
+    else
+      warn "不支持的操作系统类型: $OS\n"
+      return 1 # 返回错误状态
+    fi
+
+    # 检查安装是否成功
+    if hash "$1" >/dev/null 2>&1; then
+      success "命令 $1 安装成功！\n"
+      return 0 # 安装成功返回 0
+    else
+      error "命令 $1 安装失败！请检查错误信息。\n"
+    fi
+  else
+    success "命令 $1 已存在，无需安装。\n"
   fi
 }
 
@@ -241,7 +274,7 @@ changeSourceForChina() {
           filename_no_ext="${filename%.*}"
 
           # 修改后缀并添加日期
-          new_filename="$filename_no_ext-$current_date.$extension"
+          new_filename="$filename_no_ext-$CURRENT_DATE.$extension"
 
           # 备份文件
           sudo cp "$file" "$backup_directory/$new_filename"
@@ -273,7 +306,7 @@ changeSourceForChina() {
           filename_no_ext="${filename%.*}"
 
           # 修改后缀并添加日期
-          new_filename="$filename_no_ext-$current_date.$extension"
+          new_filename="$filename_no_ext-$CURRENT_DATE.$extension"
 
           # 备份文件
           sudo cp "$file" "$backup_directory/$new_filename"
@@ -312,7 +345,7 @@ changeSourceForChina() {
           filename_no_ext="${filename%.*}"
 
           # 修改后缀并添加日期
-          new_filename="$filename_no_ext-$current_date.$extension"
+          new_filename="$filename_no_ext-$CURRENT_DATE.$extension"
 
           # 备份文件
           sudo cp "$file" "$backup_directory/$new_filename"
@@ -344,7 +377,7 @@ changeSourceForChina() {
           filename_no_ext="${filename%.*}"
 
           # 修改后缀并添加日期
-          new_filename="$filename_no_ext-$current_date.$extension"
+          new_filename="$filename_no_ext-$CURRENT_DATE.$extension"
 
           # 备份文件
           sudo cp "$file" "$backup_directory/$new_filename"
@@ -1336,7 +1369,7 @@ install_tengine() {
   tengine_user="nginx"
   source_path="/server/nginx/sbin/nginx"
   link_path="/usr/sbin/nginx"
-  jemalloc_dl="https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2"
+  jemalloc_dl="https://gh.api.99988866.xyz/https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2"
   tengine_dl="https://tengine.taobao.org/download/tengine-$tengine_version.tar.gz"
 
   tools=("wget" "curl" "tar" "make" "bzip2")
@@ -1545,7 +1578,7 @@ EOF
     done
 
     cd $SOFTWARW_DL_DIR/tengine || exit 1
-    sudo wget https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2
+    sudo wget https://gh.api.99988866.xyz/https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2
     sudo tar xjf jemalloc-5.3.0.tar.bz2
     cd jemalloc-5.3.0 || exit 1
     sudo ./configure && sudo make && sudo make install
@@ -1953,7 +1986,7 @@ pythonDevelopEnv() {
     else
       yumInstall "make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev"
     fi
-    curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+    curl -L https://gh.api.99988866.xyz/https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
     echo '# pyenv' >>~/.bashrc
     echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.bashrc
     echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.bashrc
@@ -3501,18 +3534,18 @@ ${C07}互联网连接:${CF} ssh -p ${C02}$sshPort${CF} -i ${C03}私钥文件 ${C
 }
 
 help() {
-  echo "Usage: bash init.sh [type] [target] [options]"
+  echo "用法: $0 [类型] [目标] [选项]"
   echo
-  echo "TYPE and TARGET"
+  echo "类型和目标"
   echo
   echo "[init]"
-  echo "	The system initializes by default."
+  echo "	系统默认初始化。"
   echo "[update]"
-  echo "	The system undergoes updates and upgrades periodically to enhance its functionality and capabilities."
+  echo "	系统定期进行更新和升级，以增强其功能和能力。"
   echo
   echo "[source]"
   echo "[source]"
-  echo "	sys: Automatic modification of source address based on system assessment."
+  echo "	sys：根据系统评估自动修改源地址。"
   echo "	Ubuntu:    https://mirrors.cloud.tencent.com/ubuntu/"
   echo "	Rocky:     https://mirrors.cloud.tencent.com/rocky/"
   echo "	CentOS:    https://mirrors.cloud.tencent.com/centos/"
@@ -3520,56 +3553,56 @@ help() {
   echo "	docker:    https://docker.mirrors.ustc.edu.cn"
   echo
   echo "[key]"
-  echo "  Supplementing cryptographic keys for existing users."
-  echo "  Usage: bash init.sh key"
+  echo "  为现有用户补充加密密钥。"
+  echo "  用法: bash $0 key"
   echo
   echo "[nginx]"
-  echo "  Install the Nginx web server."
-  echo "  Usage: bash init.sh nginx"
+  echo "  安装 Nginx Web 服务器。"
+  echo "  用法: bash $0 nginx"
   echo
   echo "[tengine]"
-  echo "  Install the Tengine web server."
-  echo "  Usage: bash init.sh tengine"
+  echo "  安装 Tengine Web 服务器。"
+  echo "  用法: bash $0 tengine"
   echo
   echo "[go | golang]"
-  echo "  Set up the golang programming language development environment."
-  echo "  Usage: bash init.sh golang"
+  echo "  设置golang编程语言开发环境。"
+  echo "  用法: bash $0 golang"
   echo
   echo "[python]"
   echo "	pip: pip3"
-  echo "	pyenv: Simple Python version management"
-  echo "	pipenv: Python Development Workflow for Humans"
+  echo "	pyenv：简单的 Python 版本管理"
+  echo "	pipenv： Python 开发工作流程"
   echo "[java]"
-  echo "	jdk: openjdk-11"
-  echo "	maven: A software project management and comprehension tool"
+  echo "	jdk: OpenJDK-21"
+  echo "	maven：一个软件项目管理和理解工具"
   echo "[javascript]"
-  echo "	nvm: Node Version Manager - Simple bash script to manage multiple active node.js versions"
+  echo "	nvm：Node 版本管理器 - 用于管理多个活动 node.js 版本的简单 bash 脚本"
   echo "[docker]"
   echo "	docker-ce: "
-  echo "	docker-compose: A tool for defining and running multi-container Docker applications"
+  echo "	docker-compose：用于定义和运行多容器 Docker 应用程序的工具"
   echo
-  echo "OPTIONS"
+  echo "选项"
   echo
-  echo " -b,--basic 	Basic Tools Install: curl,git,vim,wget,zip,unzip,lrzsz,net-tools,htop"
-  echo " -v,--Version 	Show version"
-  echo " -h,--help 	Show this help message and exit"
+  echo " -b,--basic 	基本工具安装：curl、git、vim、wget、zip、unzip、lrzsz、net-tools、htop"
+  echo " -v,--Version 	显示版本"
+  echo " -h,--help 	显示此帮助消息并退出"
   echo
-  echo "Example:"
+  echo "示例:"
   echo
-  echo "	Update System"
-  echo "		bash init.sh update"
-  echo "	Install java maven"
-  echo "		bash init.sh java meven"
-  echo "	Install all python tools"
-  echo "		bash init.sh python"
+  echo "	更新系统"
+  echo "		bash $0 update"
+  echo "	安装 java maven"
+  echo "		bash $0 java meven"
+  echo "	安装所有 Python 工具"
+  echo "		bash $0 python"
 }
 
 main() {
   if [ $# -eq 0 ]; then
     welcome
-    echo "Usage: bash init.sh [type] [target] [options]"
+    echo "用法: bash $0 [type] [target] [options]"
     echo
-    echo "init.sh [-h|--help] [-v|--version] [-b|--basic]"
+    echo "$0 [-h|--help] [-v|--version] [-b|--basic]"
     echo "	{init,update,source,key,nginx,tengine,go,python,java,javascript,docker,shell} [target]"
     echo
     cmdCheck curl
