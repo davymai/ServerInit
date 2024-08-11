@@ -13,8 +13,8 @@
 # 初始化脚本设置 {{{
 
 # 脚本版本
-SCRIPT_DATE='2024-07-03'
-SCRIPT_VERSION='0.3.2'
+SCRIPT_DATE='2024-08-11'
+SCRIPT_VERSION='0.3.3'
 # 版本号格式正则表达式
 VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
 
@@ -22,13 +22,36 @@ VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
 set -eo pipefail # -e: 当命令失败时退出; -o pipefail: 管道中任何命令失败时返回非零状态
 
 # 定义常量
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" # 脚本所在目录
-readonly LOG_FILE="${SCRIPT_DIR}/init.log"                          # 日志文件路径
+# 脚本所在目录
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 日志文件路径
+readonly LOG_FILE="${SCRIPT_DIR}/script_init.log"
 
 # 函数: 日志记录
 log() {
-  local message="\$1"
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - ${message}" >>"${LOG_FILE}"
+  local message="$1"
+  local level=${2:-INFO} # 如果未指定级别，则默认为INFO
+
+  # 确保 LOG_FILE 已定义并有效
+  if [ -z "${LOG_FILE}" ]; then
+    printf "ERROR: 日志文件未定义。\n" >&2
+    return 1
+  fi
+
+  # 构建带有时间戳和级别的日志消息
+  local timestamp
+  timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+  local log_message="${message}"
+
+  # 为控制台输出保持颜色，写入日志文件前去除颜色代码
+  local clean_message
+  clean_message=$(echo -e "${message}" | sed 's/\x1B\[[0-9;]*[mK]//g')
+
+  # 将处理后的消息记录到日志文件
+  echo "[${timestamp}] [${level}] - ${clean_message}" >>"${LOG_FILE}"
+
+  # 输出到控制台
+  printf '%b\n' "${log_message}" >&2
 }
 
 # 1. 检测系统类型
@@ -119,22 +142,22 @@ msg() {
 }
 
 info() {
-  msg "${C4}[➮]${CF} ${1}${2}"
+  log "${C4}[➮]${CF} ${1}${2}"
 }
 
 cont() {
-  msg "${C3}[►]${CF} ${1}${2}"
+  log "${C3}[►]${CF} ${1}${2}"
 }
 
 warn() {
-  msg "${C5}[⚠️ WARNING]${CF} ${1}${2}"
+  log "${C5}[⚠️ WARNING]${CF} ${1}" "WARN"
 }
 error() {
-  msg "${C1}[✘ ERROR]${CF} ${1}${2}"
+  log "${C1}[✘ ERROR]${CF} ${1}" "ERROR"
   exit 1
 }
 success() {
-  msg "${C2}[✔]${CF} ${1}${2}"
+  log "${C2}[✔]${CF} ${1}${2}"
 }
 # 删除线
 strike() {
@@ -169,7 +192,7 @@ welcome() {
         ${CF}"
 }
 
-#倒计时
+# 倒计时
 CD() {
 
   while [ $cd_num -gt 0 ]; do
@@ -184,6 +207,7 @@ CD() {
   msg "                ${C06}开始执行初始化脚本...${CF}\n"
 }
 
+# 检查依赖
 cmdCheck() {
   # 检查命令是否存在
   if ! hash "$1" >/dev/null 2>&1; then
@@ -537,28 +561,44 @@ disable_services() {
   fi
 }
 
-# Disable SELinux
+# 禁用 SELinux
 disable_selinux() {
-  info "*** 禁用 selinux ***"
+  info "*** 禁用 SELinux ***"
+
+  # 检查操作系统类型
   if [[ "$OS" == *"Ubuntu"* ]] && [ ! -f "/etc/selinux/config" ]; then
-    success "Ubuntu 没有 selinux，跳过。\n"
+    success "Ubuntu 没有 SELinux，跳过。\n"
+    return 0
+  fi
+
+  # 检查 SELinux 当前状态
+  if grep -q '^SELINUX=disabled' /etc/selinux/config; then
+    success "SELinux 已禁用。\n"
+    return 0
+  fi
+
+  # 禁用 SELinux
+  if sudo setenforce 0; then
+    success "临时禁用 SELinux 成功。\n"
   else
-    SELINUX=$(grep -c '\b^SELINUX=disabled' /etc/selinux/config)
-    if [ "$SELINUX" -eq 1 ]; then
-      success "selinux 已禁用"
-    else
-      sudo setenforce 0
-      sudo sed -Ei 's!SELINUX=enforcing!SELINUX=disabled!g' /etc/selinux/config
-      success "禁用 selinux 完成。\n"
-    fi
+    warn "临时禁用 SELinux 失败。\n"
+    return 0
+  fi
+
+  # 修改配置文件以永久禁用 SELinux
+  if sudo sed -i 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config; then
+    success "永久禁用 SELinux 完成。\n"
+  else
+    warn "修改 SELinux 配置文件失败。\n"
+    return 0
   fi
 }
 
-# Password rule configuration
+# 密码规则配置
 password_rules() {
   info "*** 设置系统密码规则，提升安全性 ***"
 
-  cont "正在设置密码规则...\n至少${C1}8${CF}个字符,必须包含${C1}大小${CF}写字母"
+  cont "密码规则: 至少${C1}8${CF}个字符,必须包含${C1}大小${CF}写字母"
 
   # /etc/login.defs
   sudo sed -Ei "/^PASS_MIN_LEN/s!5!8!g" /etc/login.defs
@@ -586,13 +626,15 @@ EOL
   success "系统密码规则设置完成。\n"
 }
 
-# Delete useless users and groups
+# 删除无用的用户和组
 delete_users_and_groups() {
   info "*** 删除多余的用户和组 ***"
 
   # 备份 /etc/passwd 和 /etc/group
-  sudo cp /etc/passwd{,.bak"$(date +%Y%m%d-%H%M%S)"}
-  sudo cp /etc/group{,.bak"$(date +%Y%m%d-%H%M%S)"}
+  local timestamp
+  timestamp=$(date +%Y%m%d-%H%M%S)
+  sudo cp /etc/passwd "/etc/passwd.bak-$timestamp"
+  sudo cp /etc/group "/etc/group.bak-$timestamp"
 
   # 需要删除的用户列表
   users_to_delete=("adm" "bin" "ftp" "games" "gopher" "halt" "lp" "news" "operator" "postfix" "sync" "shutdown" "uucp")
@@ -600,23 +642,36 @@ delete_users_and_groups() {
   # 需要删除的组列表
   groups_to_delete=("adm" "dip" "lp" "news" "games" "uucp" "video" "ftp")
 
-  # 删除用户
+  # 删除用户并记录结果
   for user in "${users_to_delete[@]}"; do
-    sudo userdel "$user" 2>/dev/null # 避免显示错误信息
+    if sudo userdel "$user" 2>/dev/null; then
+      success "用户 $user 已成功删除。\n"
+    else
+      warn "用户 $user 删除失败或不存在。\n"
+    fi
   done
 
-  # 删除组
+  # 删除组并记录结果
   for group in "${groups_to_delete[@]}"; do
-    sudo groupdel "$group" 2>/dev/null # 避免显示错误信息
-  done
-
-  #删除 /usr/bin/ 失效的软链接
-  find /usr/bin/ -type l ! -exec test -e {} \; -print | while read symlink; do
-    echo "删除失效的软链接: $symlink"
-    rm -rf "$symlink"
+    if sudo groupdel "$group" 2>/dev/null; then
+      success "组 $group 已成功删除。\n"
+    else
+      warn "组 $group 删除失败或不存在。\n"
+    fi
   done
 
   success "删除无用的用户和组完成。\n"
+
+  # 删除 /usr/bin/ 中失效的软链接
+  cont "删除 /usr/bin/ 中失效的软链接"
+  local symlink
+  while IFS= read -r symlink; do
+    if [[ -L $symlink ]]; then
+      echo "删除失效的软链接: $symlink"
+      rm -f "$symlink" # 使用 -f 选项以强制删除
+    fi
+  done < <(find /usr/bin/ -type l ! -exec test -e {} \; -print)
+  success "删除失效的软链接完成。\n"
 }
 
 # Create new user
@@ -910,12 +965,19 @@ sshd_setting() {
       yumInstall "firewalld"
       sudo systemctl enable --now firewalld
     fi
-    sudo firewall-cmd --permanent --add-port="$sshPort"/tcp
-    # 开启 NAT 转发，默认关闭。
-    #sudo firewall-cmd --permanent --add-masquerade
-    sudo firewall-cmd --reload
-    sudo firewall-cmd --list-all
-    success "防火墙已放通 ${C02}$sshPort${CF} SSH 端口。\n"
+
+    # 检查 firewalld 是否正在运行
+    if ! systemctl is-active --quiet firewalld; then
+      warn "firewalld 未运行，继续执行脚本...\n"
+    else
+      sudo firewall-cmd --permanent --add-port="$sshPort"/tcp
+      # 开启 NAT 转发，默认关闭。
+      #sudo firewall-cmd --permanent --add-masquerade
+      sudo firewall-cmd --reload
+      sudo firewall-cmd --list-all
+      success "防火墙已放通 ${C02}$sshPort${CF} SSH 端口。\n"
+    fi
+
   elif command -v ufw &>/dev/null; then
     # Ubuntu 上使用 ufw
     if ! dpkg-query -W -f='${Status}' ufw 2>/dev/null | grep -q "ok installed"; then
@@ -930,7 +992,6 @@ sshd_setting() {
   else
     warn "不支持的防火墙管理工具。\n"
   fi
-
 }
 
 # 配置bashrc
@@ -1047,18 +1108,18 @@ vimrc_setting() {
 
 # 设置系统时区和时间同步
 timezone_setting() {
-  TZ="Asia/Shanghai"
-  curr_TZ=$(timedatectl | awk '/Time zone/ {print $3}')
+  TIME_ZONE="Asia/Shanghai"
+  CURRENT_TIMEZONE=$(timedatectl | awk '/Time zone/ {print $3}')
 
   info "*** 设置系统时区 ***"
 
   # 修改系统时区
   if ! timedatectl | grep "Asia/Shanghai" &>/dev/null; then
-    info "设置系统时区为: ${C02}$TZ${CF}..."
-    sudo timedatectl set-timezone $TZ
+    info "设置系统时区为: ${C02}$TIME_ZONE${CF}..."
+    sudo timedatectl set-timezone $TIME_ZONE
 
   else
-    warn "当前系统时区为: ${C02}$TZ${CF}，跳过时区设置。"
+    warn "当前系统时区为: ${C02}$TIME_ZONE${CF}，跳过时区设置。"
   fi
 
   # 时间同步
@@ -1075,8 +1136,15 @@ timezone_setting() {
       # 在 server 行前添加新的 NTP 服务器
       sudo sed -i '/^server/s/server 0.centos.pool.ntp.org/server cn.ntp.org.cn iburst\nserver ntp.aliyun.com iburst\nserver ntp.tencent.com iburst\n&/' /etc/chrony.conf
     fi
-    sudo firewall-cmd --add-service=ntp --permanent
-    sudo firewall-cmd --reload
+
+    # 检查 firewalld 状态
+    if ! systemctl is-active --quiet firewalld; then
+      warn "firewalld 未运行，继续执行脚本...\n"
+    else
+      sudo firewall-cmd --add-service=ntp --permanent
+      sudo firewall-cmd --reload
+    fi
+
     sudo systemctl enable --now chronyd
     sudo chronyc -a makestep
     sudo timedatectl status
@@ -1085,7 +1153,8 @@ timezone_setting() {
     # 对于 Ubuntu，使用 systemd-timesyncd 进行时间同步
     sudo apt-get update
     aptInstall "systemd-timesyncd"
-    # 修改systemd-timesyncd配置文件
+
+    # 修改 systemd-timesyncd 配置文件
     sudo sed -i '/^#NTP/s/.*/NTP=cn.ntp.org.cn ntp.aliyun.com ntp.tencent.com/' /etc/systemd/timesyncd.conf
     sudo ufw allow 123/udp
     sudo systemctl enable --now systemd-timesyncd
@@ -1095,7 +1164,8 @@ timezone_setting() {
     warn "未知系统，无法设置时间同步。"
   fi
 
-  success "系统时区已设为：${C02}$TZ${CF} 并${C02}开启${CF}时间同步。\n"
+  success "系统时区已设为：${C02}$TIME_ZONE${CF} 并${C02}开启${CF}时间同步。\n"
+
 }
 
 # 配置 ulimit
@@ -3598,6 +3668,7 @@ help() {
 }
 
 main() {
+  log "脚本开始执行"
   if [ $# -eq 0 ]; then
     welcome
     echo "用法: bash $0 [type] [target] [options]"
@@ -3751,6 +3822,9 @@ main() {
     "filebeat")
       Install_Filebeat
       ;;
+    "tz")
+      timezone_setting
+      ;;
     --basic | -b)
       basic_tools_install
       ;;
@@ -3762,6 +3836,10 @@ main() {
       ;;
     esac
   fi
+  log "脚本执行完成"
 }
 
-main $@
+# 脚本入口
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
