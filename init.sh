@@ -938,7 +938,7 @@ sshd_setting() {
     sudo sed -Ei '/^GSSAPIAuthentication/s/yes/no/g' "$ssh_auth_file"
     # 禁止自动断链
     sudo sed -Ei 's/^#ClientAliveInterval 0/ClientAliveInterval 60/g' "$ssh_auth_file"
-    sudo sed -Ei 's/^#ClientAliveCountMax 3/ClientAliveCountMax 360/g' "$ssh_auth_file"
+    sudo sed -Ei 's/^#ClientAliveCountMax 3/ClientAliveCountMax 1440/g' "$ssh_auth_file"
   fi
   sudo sed -Ei '/^PasswordAuthentication/s/yes/no/g' "$ssh_auth_file"
   sudo sed -Ei '/^#?PermitEmptyPasswords/s/#//g' "$ssh_auth_file"
@@ -2612,6 +2612,9 @@ EOF
             echo "# Elasticsearch" | sudo tee -a "$ES_PROFILE" >/dev/null
             echo "export PATH=\$PATH:$ES_BIN_DIR" | sudo tee -a "$ES_PROFILE" >/dev/null
 
+            # 重新加载环境变量
+            source $ES_PROFILE
+
             success "已将 $SOFTWARW_NAME 的 bin 目录添加到 PATH 中."
 
             #cont "为 elastic 创建密码"
@@ -2800,6 +2803,7 @@ EOF
           sudo systemctl enable logstash
 
           success "Logstash 服务已启动并设置为开机自启."
+
           # 检查并更新 PATH
           cont "正在检查 /etc/profile.d/logstash.sh 是否包含 Logstash 的 bin 目录..."
           sudo touch $LS_PROFILE
@@ -2813,6 +2817,7 @@ EOF
             source $LS_PROFILE
 
             success "已将 Logstash 的 bin 目录添加到 PATH 中."
+
             LS_BASE_DIR="$ELK_INSTALL_DIR/logstash"
             LS_OLD_PATH_REGEX="export PATH=\$PATH:$LS_BASE_DIR-[0-9.]+/bin"
           elif grep -q "$LS_OLD_PATH_REGEX" "$LS_PROFILE"; then
@@ -3000,10 +3005,11 @@ EOF
             echo "# Kibana" | sudo tee -a "$KB_PROFILE" >/dev/null
             echo "export PATH=\$PATH:$KB_BIN_DIR" | sudo tee -a "$KB_PROFILE" >/dev/null
 
-            success "已将 Kibana 的 bin 目录添加到 PATH 中."
-
             # 重新加载环境变量
             source $KB_PROFILE
+
+            success "已将 Kibana 的 bin 目录添加到 PATH 中."
+
             KB_OLD_PATH_REGEX="export PATH=\$PATH:$KB_BASE_DIR-[0-9.]+/bin"
           elif grep -q "$KB_OLD_PATH_REGEX" "$KB_PROFILE"; then
             CURRENT_VER=$(grep -oP "$KB_BASE_DIR-\K[0-9.]+" "$KB_PROFILE_FILE")
@@ -3170,14 +3176,64 @@ Install_Filebeat() {
 }" $FB_CONFIG_FILE
         #sed -i "/#password:/a ## 访问端口\nserver.port: $KB_Port" "$KB_CONFIG_FILE"
 
-        success "$ES_CONFIG_FILE 配置文件修改完成."
-        break
+        success "$FB_CONFIG_FILE 配置文件修改完成."
+
+        # 添加启动脚本
+        cont "正在添加 $SOFTWARW_NAME 启动脚本..."
+        sudo tee /etc/systemd/system/filebeat.service >/dev/null <<EOF
+[Unit]
+Description=Filebeat sends log files to Logstash or directly to Elasticsearch.
+Documentation=https://www.elastic.co/products/beats/filebeat
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Environment="BEAT_LOG_OPTS=-e"
+Environment="BEAT_CONFIG_OPTS=-c $FB_HOME_DIR/filebeat.yml"
+Environment="BEAT_PATH_OPTS=-path.home $FB_HOME_DIR  -path.config $FB_HOME_DIR -path.data $FB_HOME_DIR/data -path.logs $FB_HOME_DIR/logs"
+ExecStart=$FB_HOME_DIR/filebeat -c $FB_HOME_DIR/filebeat.yml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+        success "$SOFTWARW_NAME 启动脚本已成功添加到 /etc/systemd/system/filebeat.service."
+
+        # 重新加载 systemd 管理器配置
+        sudo systemctl daemon-reload
+
+        # 启动 Filebeat 服务
+        sleep 3
+        sudo systemctl start filebeat
+        sleep 3
+        sudo systemctl enable filebeat
+
+        success "$SOFTWARW_NAME 服务已启动并设置为开机自启."
+
+        # 检查并更新 PATH
+        FB_PROFILE="/etc/profile.d/filebeat.sh"
+        cont "正在检查 /etc/profile.d/filebeat.sh 是否包含 $SOFTWARW_NAME 的 bin 目录..."
+        sudo touch $FB_PROFILE
+
+        if ! grep -q "export PATH=.*$FB_BIN_DIR" "$FB_PROFILE"; then
+          echo "# Filebeat" | sudo tee -a "$FB_PROFILE" >/dev/null
+          echo "export PATH=\$PATH:$FB_BIN_DIR" | sudo tee -a "$FB_PROFILE" >/dev/null
+
+          # 重新加载环境变量
+          source $FB_PROFILE
+
+          success "已将 $SOFTWARW_NAME 的 bin 目录添加到 PATH 中."
+          break
+        else
+          warn "下载地址无效，请重新输入版本号。"
+        fi
       else
-        warn "下载地址无效，请重新输入版本号。"
+        warn "版本号格式不正确，请输入类似 '$FB_DEFAULT_VERSION' 的格式。"
       fi
-    else
-      warn "版本号格式不正确，请输入类似 '$FB_DEFAULT_VERSION' 的格式。"
     fi
+    # 重新加载环境变量
+    source $FB_PROFILE
   done
 }
 
@@ -3415,6 +3471,19 @@ EOF
 
         # 检查下载地址是否有效
         if wget --spider "$FRPC_DL_URL" 2>&1 | grep -q '200'; then
+
+        cont "设置 frp 服务器访问地址..."
+          IP_REGEX="^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$"
+          while :; do
+            read -rp "请输入 frp 服务器访问地址(留空默认: 0.0.0.0): " FRPC_Host
+            FRPC_Host="${FRPC_Host:-0.0.0.0}"
+            if [[ ! $FRPC_Host =~ $IP_REGEX ]]; then
+              warn "IP地址格式不正确，请重新输入!"
+            else
+              break
+            fi
+          done
+
 
           cont "下载地址有效，设置 frp 服务器 访问端口..."
           while :; do
