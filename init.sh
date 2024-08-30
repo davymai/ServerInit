@@ -3233,7 +3233,7 @@ EOF
       fi
     fi
     # 重新加载环境变量
-    source $FB_PROFILE
+    source /etc/profile.d/filebeat.sh
   done
 }
 
