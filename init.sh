@@ -13,8 +13,8 @@
 # 初始化脚本设置 {{{
 
 # 脚本版本
-SCRIPT_DATE='2024-08-11'
-SCRIPT_VERSION='0.3.3'
+SCRIPT_DATE='2024-09-04'
+SCRIPT_VERSION='0.3.31'
 # 版本号格式正则表达式
 VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
 
