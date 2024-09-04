@@ -21,105 +21,7 @@ VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
 # 设置严格模式
 #set -eo pipefail # -e: 当命令失败时退出; -o pipefail: 管道中任何命令失败时返回非零状态
 
-# 定义常量
-# 脚本所在目录
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# 日志文件路径
-readonly LOG_FILE="${SCRIPT_DIR}/script_init.log"
-
-# 函数: 日志记录
-log() {
-  local message="$1"
-  local level=${2:-INFO} # 如果未指定级别，则默认为INFO
-
-  # 确保 LOG_FILE 已定义并有效
-  if [ -z "${LOG_FILE}" ]; then
-    printf "ERROR: 日志文件未定义。\n" >&2
-    return 1
-  fi
-
-  # 构建带有时间戳和级别的日志消息
-  local timestamp
-  timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-  local log_message="${message}"
-
-  # 为控制台输出保持颜色，写入日志文件前去除颜色代码
-  local clean_message
-  clean_message=$(echo -e "${message}" | sed 's/\x1B\[[0-9;]*[mK]//g')
-
-  # 将处理后的消息记录到日志文件
-  echo "[${timestamp}] [${level}] - ${clean_message}" >>"${LOG_FILE}"
-
-  # 输出到控制台
-  printf '%b\n' "${log_message}" >&2
-}
-
-# 1. 检测系统类型
-source /etc/os-release
-OS=$NAME
-OS_VER=$VERSION_ID
-
-# 2. 设置时区
-# 检查 timedatectl 的 NTP 服务状态
-if [[ "$OS" == **"CentOS Linux"** && "$OS_VER" == *"7"* ]]; then
-  NTP_STATUS=$(timedatectl status | grep "NTP synchronized" | awk '{print $3}')
-else
-  NTP_STATUS=$(timedatectl show -p NTPSynchronized --value)
-fi
-if [ "$NTP_STATUS" != "yes" ]; then
-  echo "NTP 服务未启用。设置时区和时间。"
-
-  # 获取当前 RTC 时间
-  RTC_TIME=$(timedatectl | awk '/RTC time/ {print $4, $5}')
-  # 检查 RTC_TIME 是否成功获取
-  if [ -n "$RTC_TIME" ]; then
-    # 计算中国标准时间 (CST)
-    CN_TIME=$(date -d "$RTC_TIME + 8 hours" +"%Y-%m-%d %H:%M:%S")
-    # 设置系统时间为中国标准时间
-    sudo timedatectl set-time "$CN_TIME"
-    echo "时区已设置为中国标准时间 (CST)。"
-  fi
-  # 获取当前日期
-  if [ -n "$RTC_TIME" ]; then
-    CURRENT_DATE=$(date -d "$RTC_TIME + 8 hours" +"%Y%m%d")
-  fi
-fi
-
-# 3. 中文支持
-# 检查 /etc/profile 是否包含 "export LC_ALL=en_US.UTF-8"
-if [[ "$OS" == **"Rocky"** ]]; then
-  if ! sudo grep -q "export LC_ALL=en_US.UTF-8" /etc/profile; then
-    # 如果不包含，则添加该行
-    echo "export LC_ALL=en_US.UTF-8" | sudo tee -a /etc/profile >/dev/null
-    # 重新加载 /etc/profile 以应用更改
-    source /etc/profile
-  fi
-fi
-
-# 4. CentOS 设置参数
-if [[ "$OS" == **"CentOS"** ]]; then
-  . /etc/rc.d/init.d/functions
-fi
-
-# 5. 当前用户
-currUser=$(whoami)
-
-# 6. 设置要备份的文件夹路径
-source_directory="/etc/yum.repos.d"
-
-# 7. 设置备份目标目录路径
-backup_directory="/etc/yum.repos.d/backup"
-
-# 9. 获取IP地址
-#外网IP地址
-MYIP=$(curl -s ip.sb)
-# 内网IP地址
-IPADD=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}')
-
-# 10. shell目录
-ShellFolder=$(cd "$(dirname -- "$0")" || exit pwd)
-
-# 11. 设置颜色变量
+# 设置颜色变量
 SS='\033[5m'   # 文字闪烁
 CF='\033[0m'   # 关闭文字属性
 C00='\E[0;30m' # 黑色
@@ -171,9 +73,63 @@ blink() {
   printf '%b\n' "\E[33;5m$1\E[0m" >&2
 }
 
-#倒计时参数
-cd_num=5
-delay=1
+# 脚本所在目录
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 记录日志
+# 日志文件路径
+readonly LOG_FILE="${SCRIPT_DIR}/script_init.log"
+log() {
+  local message="$1"
+  local level=${2:-INFO} # 如果未指定级别，则默认为INFO
+
+  # 构建带有时间戳和级别的日志消息
+  local timestamp
+  timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+  local log_message="${message}"
+
+  # 为控制台输出保持颜色，写入日志文件前去除颜色代码
+  local clean_message
+  clean_message=$(echo -e "${message}" | sed 's/\x1B\[[0-9;]*[mK]//g')
+
+  # 将处理后的消息记录到日志文件
+  echo "[${timestamp}] [${level}] - ${clean_message}" >>"${LOG_FILE}"
+
+  # 输出到控制台
+  printf '%b\n' "${log_message}" >&2
+}
+
+# 检测系统类型
+source /etc/os-release
+OS=$NAME
+OS_VER=$VERSION_ID
+
+# 历史命令显示操作时间
+if ! grep HISTTIMEFORMAT /etc/bashrc >/dev/null 2>&1; then
+  echo 'export HISTTIMEFORMAT="%Y-%m-%d %H:%M:%S  `whoami` "' >>/etc/bashrc
+fi
+
+# CentOS 函数设置
+if [[ "$OS" == **"CentOS"** ]]; then
+  . /etc/rc.d/init.d/functions
+fi
+
+# 当前用户
+currUser=$(whoami)
+
+# 设置要备份的文件夹路径
+source_directory="/etc/yum.repos.d"
+
+# 设置备份目标目录路径
+backup_directory="/etc/yum.repos.d/backup"
+
+# 获取IP地址
+#外网IP地址
+#MYIP=$(curl -s ip.sb)
+MYIP=$(curl -s icanhazip.com)
+# 内网IP地址
+#IPADD=$(ip addr | awk '/^[0-9]+: / {}; /inet.*global/ {print gensub(/(.*)\/(.*)/, "\\1", "g", $2)}')
+IPADD=$(hostname -I | awk '{print $1}')
 
 # }}}
 
@@ -197,6 +153,9 @@ welcome() {
 
 # 倒计时
 CD() {
+  #倒计时参数
+  cd_num=5
+  delay=1
 
   while [ $cd_num -gt 0 ]; do
     echo -ne "\r        ${C06}初始化脚本 ${C1}$cd_num${C06} 秒后开始，按 ${C3}ctrl C ${C06}取消${CF}"
@@ -208,6 +167,46 @@ CD() {
   sleep $delay
   echo -ne "\033[A\r\033[K"
   msg "                ${C06}开始执行初始化脚本...${CF}\n"
+
+  # 设置时区
+  # 检查 timedatectl 的 NTP 服务状态
+  if [[ "$OS" == **"CentOS Linux"** && "$OS_VER" == *"7"* ]]; then
+    NTP_STATUS=$(timedatectl status | grep "NTP synchronized" | awk '{print $3}')
+  else
+    NTP_STATUS=$(timedatectl show -p NTPSynchronized --value)
+  fi
+  if [ "$NTP_STATUS" != "yes" ]; then
+    warn "NTP 服务未启用。设置时区和时间。"
+
+    # 获取当前 RTC 时间
+    RTC_TIME=$(timedatectl | awk '/RTC time/ {print $4, $5}')
+    # 检查 RTC_TIME 是否成功获取
+    if [ -n "$RTC_TIME" ]; then
+      # 计算中国标准时间 (CST)
+      CN_TIME=$(date -d "$RTC_TIME + 8 hours" +"%Y-%m-%d %H:%M:%S")
+      # 设置系统时间为中国标准时间
+      sudo timedatectl set-time "$CN_TIME"
+      success "时区已设置为中国标准时间 (CST)。\n"
+    fi
+    # 获取当前日期
+    if [ -n "$RTC_TIME" ]; then
+      CURRENT_DATE=$(date -d "$RTC_TIME + 8 hours" +"%Y%m%d")
+    fi
+  fi
+
+  # Rocky Linux en_US.UTF-8 支持
+  # 检查 /etc/profile 是否包含 "export LC_ALL=en_US.UTF-8"
+  if [[ "$OS" == **"Rocky"** ]]; then
+    cont "设置 Rocky Linux en_US.UTF-8支持"
+    if ! sudo grep -q "export LC_ALL=en_US.UTF-8" /etc/profile; then
+      # 如果不包含，则添加该行
+      echo "export LC_ALL=en_US.UTF-8" | sudo tee -a /etc/profile >/dev/null
+      # 重新加载 /etc/profile 以应用更改
+      source /etc/profile
+    fi
+    success "Rocky Linux en_US.UTF-8 支持设置完成\n"
+  fi
+
 }
 
 # 检查依赖
@@ -271,10 +270,10 @@ changeSourceForChina() {
       # 创建备份
       cont "备份 /etc/apt/sources.list"
       sudo cp /etc/apt/sources.list{,.bak"$(date +%Y%m%d%-H%M%S)"}
-      sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.cloud.tencent.com/g' /etc/apt/sources.list
+      sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
       # 可选择使用其他源，比如阿里云
       # sudo sed -Ei 's/[a-zA-Z]*.archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
-      success "[${C03}sources${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
+      success "[${C03}sources${CF}] 源修改为 [${C02}阿里云${CF}] 完成\n"
       sudo apt-get update >/dev/null
     elif [[ "$OS" == **"Rocky"** ]]; then
       # Rocky & CentOS /etc/yum.repos.d/ 创建备份目录
@@ -308,12 +307,12 @@ changeSourceForChina() {
           cont "备份: $file -> $backup_directory/$new_filename"
         fi
         sudo sed -e 's!^mirrorlist=!#mirrorlist=!g' \
-          -e 's!^#baseurl=http://dl.rockylinux.org/$contentdir!baseurl=https://mirrors.cloud.tencent.com/rocky!g' \
-          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
+          -e 's!^#baseurl=http://dl.rockylinux.org/$contentdir!baseurl=https://mirrors.aliyun.com/rockylinux!g' \
+          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.aliyun.com/rockylinux!g' \
           -e 's!http://mirrors!https://mirrors!g' \
           -i "$file"
       done
-      success "[${C03}repo${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
+      success "[${C03}repo${CF}] 源修改为 [${C02}阿里云${CF}] 完成\n"
       # 更新缓存
       sudo yum makecache >/dev/null
 
@@ -340,26 +339,26 @@ changeSourceForChina() {
           cont "备份: $file -> $backup_directory/$new_filename"
         fi
 
-        sudo sed -e 's!^mirrorlist=!#mirrorlist=!g' \
-          -e 's!^#baseurl=http://mirror.centos.org!baseurl=https://mirrors.cloud.tencent.com!g' \
-          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
+        sudo sed -e 's|^mirrorlist=|#mirrorlist=|g' \
+          -e 's|^#baseurl=http://mirror.centos.org!baseurl=https://mirrors.aliyun.com!g' \
+          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.aliyun.com!g' \
           -e 's!http://mirrors!https://mirrors!g' \
-          -i "$file"
+          -i "$file" 
       done
       # 更新缓存
       sudo yum makecache fast >/dev/null
-      success "[${C03}repo${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
+      success "[${C03}repo${CF}] 源修改为 [${C02}阿里云${CF}] 完成\n"
     fi
 
     # epel
     # 检查服务器类型
     if [[ "$OS" == **"Rocky"** ]]; then
-      # 如果是Rocky Linux，安装epel-release包
+      # 如果是Rocky Linux，安装包
       dnfInstall "epel-release"
       sudo /usr/bin/crb enable
 
       # 备份并修改配置文件
-      cont "备份并修改 ${C4}$OS${CF} 的 epel 配置文件为[tsinghua清华]源"
+      cont "备份并修改 ${C4}$OS${CF} 的 epel 配置文件为[阿里云]源"
       # 使用find命令查找/etc/yum.repos.d/目录下所有包含"epel"的文件，但不包括epel-cisco-openh264.repo
       config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'epel*.repo' ! -name 'epel-cisco-openh264.repo')
       for file in $config_files; do
@@ -380,13 +379,13 @@ changeSourceForChina() {
         fi
         sudo sed -e 's!^metalink=!#metalink=!g' \
           -e 's!^#baseurl=!baseurl=!g' \
-          -e 's!//download\.fedoraproject\.org/pub!//mirrors.tuna.tsinghua.edu.cn!g' \
-          -e 's!//download\.example/pub!//mirrors.tuna.tsinghua.edu.cn!g' \
-          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.tuna.tsinghua.edu.cn!g' \
+          -e 's!//download\.fedoraproject\.org/pub!//mirrors.aliyun.com!g' \
+          -e 's!//download\.example/pub!//mirrors.aliyun.com!g' \
+          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.aliyun.com!g' \
           -e 's!http://mirrors!https://mirrors!g' \
           -i "$file"
       done
-      success "[${C03}epel${CF}] 源修改为 [${C02}tsinghua清华${CF}] 完成\n"
+      success "[${C03}epel${CF}] 源修改为 [${C02}阿里云${CF}] 完成\n"
 
     elif [[ "$OS" == **"CentOS"** ]]; then
       # 如果是CentOS，安装epel-release包
@@ -412,14 +411,14 @@ changeSourceForChina() {
         fi
         sudo sed -e 's!^metalink=!#metalink=!g' \
           -e 's!^#baseurl=!baseurl=!g' \
-          -e 's!//download\.fedoraproject\.org/pub!//mirrors.cloud.tencent.com!g' \
-          -e 's!//download\.example/pub!//mirrors.cloud.tencent.com!g' \
-          -e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
+          -e 's!//download\.fedoraproject\.org/pub!//mirrors.aliyun.com!g' \
+          -e 's!//download\.example/pub!//mirrors.aliyun.com!g' \
+          \
           -e 's!http://mirrors!https://mirrors!g' \
-          -i "$file"
+          -i "$file" #-e 's!//mirrors\.cloud\.aliyuncs\.com!//mirrors.cloud.tencent.com!g' \
       done
 
-      success "[${C03}epel${CF}] 源修改为 [${C02}腾讯云${CF}] 完成\n"
+      success "[${C03}epel${CF}] 源修改为 [${C02}阿里云${CF}] 完成\n"
     fi
     ;;
   2)
@@ -488,9 +487,13 @@ basic_tools_install() {
   cont "安装 ${C3}基础工具${CF}..."
 
   # 定义基础工具列表
-  tools=("vim" "curl" "wget" "git" "zip" "htop")
+  yumtools=("bind-utils" "vim" "curl" "wget" "git" "zip" "unzip" "htop" "gcc" "make" "autoconf" "sysstat" "iostat" "iftop" "iotp" "lsof" "openssh-clients" "ntpdate")
+  apttools=("dnsutils" "vim" "curl" "wget" "git" "zip" "unzip" "htop" "gcc" "make" "autoconf" "sysstat" "iostat" "iftop" "iotp" "lsof" "openssh-clients" "ntpdate")
 
-  for tool in "${tools[@]}"; do
+  # 安装工具函数
+  install_tool() {
+    local tool="$1"
+
     if command -v "$tool" &>/dev/null; then
       warn "${tool} 已安装，跳过。"
     else
@@ -500,8 +503,20 @@ basic_tools_install() {
         yumInstall "$tool"
       fi
     fi
+  }
+
+  # 判断并执行安装
+  if [[ "$OS" == *"Ubuntu"* ]]; then
+    tools=("${aptools[@]}")
+  else
+    tools=("${yumtools[@]}")
+  fi
+
+  for tool in "${tools[@]}"; do
+    install_tool "$tool"
   done
 
+  cont "安装 lrzsz"
   if command -v rz &>/dev/null && command -v sz &>/dev/null; then
     warn "lrzsz 已安装，跳过。"
   else
@@ -512,6 +527,7 @@ basic_tools_install() {
     fi
   fi
 
+  cont "安装 net-tools"
   if command -v mii-tool &>/dev/null; then
     warn "net-tools 已安装，跳过。"
   else
@@ -521,7 +537,9 @@ basic_tools_install() {
       yumInstall "net-tools"
     fi
   fi
-  # 守护进程
+
+  # 安装守护进程
+  cont "安装 supervisord"
   if [ -e "/etc/supervisord.conf" ] || [ -e "/etc/supervisor/supervisord.conf" ]; then
     warn "supervisor 已安装，跳过。"
   else
@@ -1206,8 +1224,7 @@ sysctl_setting() {
   info "*** 系统内核优化 ***"
   sudo cp /etc/sysctl.conf{,.bak"$(date +%Y%m%d%-H%M%S)"}
   echo | sudo tee /etc/sysctl.conf >/dev/null
-  if [[ "$OS" == **"Rocky"** ]] || [[ "$OS" == **"CentOS"** ]]; then
-    sudo tee /etc/sysctl.conf >/dev/null <<EOF
+  sudo tee /etc/sysctl.conf >/dev/null <<EOF
 fs.file-max = 655350
 fs.suid_dumpable = 0
 vm.swappiness = 0
@@ -1218,15 +1235,16 @@ vm.dirty_background_ratio = 5
 # 调整进程最大虚拟内存区域数量
 vm.max_map_count=262144
 # 开启重用。允许将TIME-WAIT sockets 重新用于新的TCP 连接
-net.ipv4.tcp_fin_timeout = 30
+net.ipv4.tcp_fin_timeout = 20
 net.ipv4.tcp_tw_reuse = 1
 #net.ipv4.tcp_tw_recycle = 0
 # 开启SYN洪水攻击保护
 net.ipv4.tcp_syncookies = 1
-# 当keepalive 起用的时候，TCP 发送keepalive 消息的频度。缺省是2 小时
+# 当keepalive 起用的时候，TCP 发送 keepalive 消息的频度。缺省是2 小时
 net.ipv4.tcp_keepalive_time = 600
-# timewait的数量，默认18000
+# timewait的数量，默认 18000
 net.ipv4.tcp_max_tw_buckets = 36000
+net.ipv4.tcp_max_syn_backlog = 36000
 net.core.somaxconn = 65535
 net.core.netdev_max_backlog = 262144
 net.ipv4.tcp_max_orphans = 262144
@@ -1240,36 +1258,7 @@ net.ipv4.conf.all.rp_filter = 1
 # IP 转发，默认关闭
 #net.ipv4.ip_forward=1
 EOF
-  elif [[ "$OS" == *"Ubuntu"* ]]; then
-    sudo tee /etc/sysctl.conf >/dev/null <<EOF
-fs.file-max = 655350
-fs.suid_dumpable = 0
-vm.swappiness = 0
-vm.dirty_ratio = 20
-# overcommit_memory 内存机制
-vm.overcommit_memory=1
-vm.dirty_background_ratio = 5
-# 调整进程最大虚拟内存区域数量
-vm.max_map_count=262144
-# 开启重用。允许将TIME-WAIT sockets 重新用于新的TCP 连接
-net.ipv4.tcp_fin_timeout = 30
-net.ipv4.tcp_tw_reuse = 1
-#net.ipv4.tcp_tw_recycle = 0
-# 开启SYN洪水攻击保护
-net.ipv4.tcp_syncookies = 1
-# 当keepalive 起用的时候，TCP 发送keepalive 消息的频度。缺省是2 小时
-net.ipv4.tcp_keepalive_time = 600
-# timewait的数量，默认18000
-net.ipv4.tcp_max_tw_buckets = 36000
-net.core.somaxconn = 65535
-net.core.netdev_max_backlog = 262144
-net.ipv4.tcp_max_orphans = 262144
-# 开启反向路径过滤(增强网络安全)
-net.ipv4.conf.all.rp_filter = 1
-# IP 转发，默认关闭
-#net.ipv4.ip_forward=1
-EOF
-  fi
+
   if command -v sysctl &>/dev/null; then
     sudo sysctl -p
     success "sysctl 内核优化完成。\n"
@@ -3739,7 +3728,7 @@ help() {
 }
 
 main() {
-  log "脚本开始执行"
+  log "开始执行脚本"
   if [ $# -eq 0 ]; then
     welcome
     echo "用法: bash $0 [type] [target] [options]"
