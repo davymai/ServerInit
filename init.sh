@@ -19,7 +19,7 @@ SCRIPT_VERSION='0.3.3'
 VERSION_REGEX="^[0-9]+\.[0-9]+\.[0-9]+$"
 
 # 设置严格模式
-set -eo pipefail # -e: 当命令失败时退出; -o pipefail: 管道中任何命令失败时返回非零状态
+#set -eo pipefail # -e: 当命令失败时退出; -o pipefail: 管道中任何命令失败时返回非零状态
 
 # 定义常量
 # 脚本所在目录
@@ -61,24 +61,27 @@ OS_VER=$VERSION_ID
 
 # 2. 设置时区
 # 检查 timedatectl 的 NTP 服务状态
-NTP_STATUS=$(timedatectl show -p NTPSynchronized --value)
+if [[ "$OS" == **"CentOS Linux"** && "$OS_VER" == *"7"* ]]; then
+  NTP_STATUS=$(timedatectl status | grep "NTP synchronized" | awk '{print $3}')
+else
+  NTP_STATUS=$(timedatectl show -p NTPSynchronized --value)
+fi
 if [ "$NTP_STATUS" != "yes" ]; then
   echo "NTP 服务未启用。设置时区和时间。"
-  if [[ "$OS" != **"CentOS"** ]]; then
-    # 获取当前 RTC 时间
-    RTC_TIME=$(timedatectl | awk '/RTC time/ {print $4, $5}')
-    # 检查 RTC_TIME 是否成功获取
-    if [ -n "$RTC_TIME" ]; then
-      # 计算中国标准时间 (CST)
-      CN_TIME=$(date -d "$RTC_TIME + 8 hours" +"%Y-%m-%d %H:%M:%S")
-      # 设置系统时间为中国标准时间
-      sudo timedatectl set-time "$CN_TIME"
-      echo "时区已设置为中国标准时间 (CST)。"
-    fi
-    # 获取当前日期
-    if [ -n "$RTC_TIME" ]; then
-      CURRENT_DATE=$(date -d "$RTC_TIME + 8 hours" +"%Y%m%d")
-    fi
+
+  # 获取当前 RTC 时间
+  RTC_TIME=$(timedatectl | awk '/RTC time/ {print $4, $5}')
+  # 检查 RTC_TIME 是否成功获取
+  if [ -n "$RTC_TIME" ]; then
+    # 计算中国标准时间 (CST)
+    CN_TIME=$(date -d "$RTC_TIME + 8 hours" +"%Y-%m-%d %H:%M:%S")
+    # 设置系统时间为中国标准时间
+    sudo timedatectl set-time "$CN_TIME"
+    echo "时区已设置为中国标准时间 (CST)。"
+  fi
+  # 获取当前日期
+  if [ -n "$RTC_TIME" ]; then
+    CURRENT_DATE=$(date -d "$RTC_TIME + 8 hours" +"%Y%m%d")
   fi
 fi
 
@@ -3472,7 +3475,7 @@ EOF
         # 检查下载地址是否有效
         if wget --spider "$FRPC_DL_URL" 2>&1 | grep -q '200'; then
 
-        cont "设置 frp 服务器访问地址..."
+          cont "设置 frp 服务器访问地址..."
           IP_REGEX="^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$"
           while :; do
             read -rp "请输入 frp 服务器访问地址(留空默认: 0.0.0.0): " FRPC_Host
@@ -3483,7 +3486,6 @@ EOF
               break
             fi
           done
-
 
           cont "下载地址有效，设置 frp 服务器 访问端口..."
           while :; do
