@@ -680,15 +680,14 @@ delete_users_and_groups() {
       warn "组 $group 删除失败或不存在。\n"
     fi
   done
-
   success "删除无用的用户和组完成。\n"
 
   # 删除 /usr/bin/ 中失效的软链接
-  cont "删除 /usr/bin/ 中失效的软链接"
+  info "删除 /usr/bin/ 中失效的软链接"
   local symlink
   while IFS= read -r symlink; do
     if [[ -L $symlink ]]; then
-      echo "删除失效的软链接: $symlink"
+      cont "删除失效的软链接: $symlink"
       rm -f "$symlink" # 使用 -f 选项以强制删除
     fi
   done < <(find /usr/bin/ -type l ! -exec test -e {} \; -print)
