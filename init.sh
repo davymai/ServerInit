@@ -3045,7 +3045,7 @@ Install_Filebeat() {
   ELK_INSTALL_DIR="/data/server/elk"
   ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
   # 默认版本号
-  FB_DEFAULT_VERSION="7.9.1"
+  FB_DEFAULT_VERSION="8.15.1"
   # 创建所需的目录
   sudo mkdir -p "$ELK_DL_DIR" "$ELK_INSTALL_DIR"
 
@@ -3061,7 +3061,7 @@ Install_Filebeat() {
     # 检查版本号格式
     if [[ "$FB_VER" =~ $VERSION_REGEX ]]; then
       # 拼接下载地址
-      FB_BASE_URL="https://mirrors.huaweicloud.com/$SOFTWARW_NAME/$FB_VER"
+      FB_BASE_URL="https://artifacts.elastic.co/downloads/beats/$SOFTWARW_NAME/"
       FB_FILENAME="$SOFTWARW_NAME-$FB_VER-linux-x86_64.tar.gz"
       FB_DL_URL="$FB_BASE_URL/$FB_FILENAME"
 
