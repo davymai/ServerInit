@@ -281,7 +281,7 @@ changeSourceForChina() {
       # 进入源文件夹
       cd "$source_directory"
       # 检查服务器类型和版本
-      if [[ "$OS_VER" == *"9"* ]]; then
+      if [[ "$OS_VER" == 9 ]]; then
         # Rocky Linux 9
         config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'rocky*.repo')
       elif [[ "$OS_VER" == *"8"* ]]; then
@@ -950,11 +950,11 @@ sshd_setting() {
   sudo sed -Ei 's/^#Port [0-9]{1,5}/Port '"$sshPort"'/g' "$ssh_auth_file"
 
   # 禁止密码登陆
-  if [[ "$OS" == *"Ubuntu"* || "$OS" == **"Rocky"** && "$OS_VER" == *"9"* ]]; then
+  if [[ "$OS" == *"Ubuntu"* || "$OS" == **"Rocky"** && "$OS_VER" -ge 9 && "$OS_VER" -lt 10 ]]; then
     sudo sed -Ei '/^#?(PasswordAuthentication|GSSAPIAuthentication)/s/#//g' "$ssh_auth_file"
-  elif [[ "$OS" == **"Rocky"** && "$OS_VER" == *"9"* ]]; then
+  elif [[ "$OS" == **"Rocky"** && "$OS_VER" > 9 ]]; then
     sudo sed -Ei 's/^#UsePAM.*/UsePAM yes/g' "$ssh_auth_file"
-  elif [[ "$OS" == **"CentOS"** || "$OS" == **"Rocky"** && "$OS_VER" == *"8"* ]]; then
+  elif [[ "$OS" == **"CentOS"** || "$OS" == **"Rocky"** && "$OS_VER" -lt 9 ]]; then
     sudo sed -Ei '/^GSSAPIAuthentication/s/yes/no/g' "$ssh_auth_file"
     # 禁止自动断链
     sudo sed -Ei 's/^#ClientAliveInterval 0/ClientAliveInterval 60/g' "$ssh_auth_file"
@@ -963,7 +963,7 @@ sshd_setting() {
   sudo sed -Ei '/^PasswordAuthentication/s/yes/no/g' "$ssh_auth_file"
   sudo sed -Ei '/^#?PermitEmptyPasswords/s/#//g' "$ssh_auth_file"
   # 禁止 root 用户登录
-  if [[ "$OS" == **"Rocky"** && "$OS_VER" == *"8"* ]]; then
+  if [[ "$OS" == **"Rocky"** && "$OS_VER" -lt 9 ]]; then
     sudo sed -Ei '/^PermitRootLogin/s/yes/no/g' "$ssh_auth_file"
   else
     sudo sed -Ei 's/^#PermitRootLogin.*/PermitRootLogin no/g' "$ssh_auth_file"
@@ -2464,7 +2464,7 @@ Install_elk() {
       # 检查版本号格式
       if [[ "$ELK_VER" =~ $VERSION_REGEX ]]; then
         # 拼接下载地址
-        ES_BASE_URL="https://mirrors.huaweicloud.com/elasticsearch/$ELK_DEFAULT_VERSION"
+        ES_BASE_URL="https://artifacts.elastic.co/downloads/elasticsearch"
         ES_FILENAME="elasticsearch-$ELK_VER-linux-x86_64.tar.gz"
         ES_DL_URL="$ES_BASE_URL/$ES_FILENAME"
 
@@ -2666,7 +2666,7 @@ EOF
       # 检查版本号格式
       if [[ "$ELK_VER" =~ $VERSION_REGEX ]]; then
         # 拼接下载地址
-        LS_BASE_URL="https://mirrors.huaweicloud.com/logstash/$ELK_DEFAULT_VERSION"
+        LS_BASE_URL="https://artifacts.elastic.co/downloads/logstash"
         LS_FILENAME="logstash-$ELK_VER-linux-x86_64.tar.gz"
         LS_DL_URL="$LS_BASE_URL/$LS_FILENAME"
 
@@ -2861,7 +2861,7 @@ EOF
       # 检查版本号格式
       if [[ "$ELK_VER" =~ $VERSION_REGEX ]]; then
         # 拼接下载地址
-        KB_BASE_URL="https://mirrors.huaweicloud.com/kibana/$ELK_DEFAULT_VERSION"
+        KB_BASE_URL="https://artifacts.elastic.co/downloads/kibana"
         KB_FILENAME="kibana-$ELK_VER-linux-x86_64.tar.gz"
         KB_DL_URL="$KB_BASE_URL/$KB_FILENAME"
 
@@ -3061,7 +3061,7 @@ Install_Filebeat() {
     # 检查版本号格式
     if [[ "$FB_VER" =~ $VERSION_REGEX ]]; then
       # 拼接下载地址
-      FB_BASE_URL="https://artifacts.elastic.co/downloads/beats/$SOFTWARW_NAME/"
+      FB_BASE_URL="https://artifacts.elastic.co/downloads/beats/filebeat"
       FB_FILENAME="$SOFTWARW_NAME-$FB_VER-linux-x86_64.tar.gz"
       FB_DL_URL="$FB_BASE_URL/$FB_FILENAME"
 
