@@ -2434,8 +2434,8 @@ Install_elk() {
   # 默认参数
   ELK_INSTALL_DIR="/data/server/elk"
   ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
-  # 默认版本号 8.8.1
-  ELK_DEFAULT_VERSION="8.8.1"
+  # 默认版本号 8.15.1
+  ELK_DEFAULT_VERSION="8.15.1"
   # 创建所需的目录
   sudo mkdir -p "$ELK_DL_DIR" "$ELK_INSTALL_DIR"
   case ${1} in
@@ -2648,8 +2648,8 @@ EOF
     # 默认参数
     ELK_INSTALL_DIR="/data/server/elk"
     ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
-    # 默认版本号 8.8.1
-    ELK_DEFAULT_VERSION="8.8.1"
+    # 默认版本号 8.15.1
+    ELK_DEFAULT_VERSION="8.15.1"
     # 创建所需的目录
     sudo mkdir -p "$ELK_DL_DIR" "$ELK_INSTALL_DIR"
 
@@ -2843,8 +2843,8 @@ EOF
     # 默认参数
     ELK_INSTALL_DIR="/data/server/elk"
     ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
-    # 默认版本号 8.8.1
-    ELK_DEFAULT_VERSION="8.8.1"
+    # 默认版本号 8.15.1
+    ELK_DEFAULT_VERSION="8.15.1"
     # 创建所需的目录
     sudo mkdir -p "$ELK_DL_DIR" "$ELK_INSTALL_DIR"
 
