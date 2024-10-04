@@ -281,7 +281,7 @@ changeSourceForChina() {
       # 进入源文件夹
       cd "$source_directory"
       # 检查服务器类型和版本
-      if [[ "$OS_VER" == 9 ]]; then
+      if [[ "$OS_VER" -ge 9 && "$OS_VER" -lt 10 ]]; then
         # Rocky Linux 9
         config_files=$(sudo find /etc/yum.repos.d/ -maxdepth 1 -type f -name 'rocky*.repo')
       elif [[ "$OS_VER" == *"8"* ]]; then
@@ -950,11 +950,11 @@ sshd_setting() {
   sudo sed -Ei 's/^#Port [0-9]{1,5}/Port '"$sshPort"'/g' "$ssh_auth_file"
 
   # 禁止密码登陆
-  if [[ "$OS" == *"Ubuntu"* || "$OS" == **"Rocky"** && "$OS_VER" -ge 9 && "$OS_VER" -lt 10 ]]; then
+  if [[ "$OS" == *"Ubuntu"* || "$OS" == **"Rocky"** && ${OS_VER%%.*} == 9 ]]; then
     sudo sed -Ei '/^#?(PasswordAuthentication|GSSAPIAuthentication)/s/#//g' "$ssh_auth_file"
-  elif [[ "$OS" == **"Rocky"** && "$OS_VER" > 9 ]]; then
+  elif [[ "$OS" == **"Rocky"** && ${OS_VER%%.*} == 9 ]]; then
     sudo sed -Ei 's/^#UsePAM.*/UsePAM yes/g' "$ssh_auth_file"
-  elif [[ "$OS" == **"CentOS"** || "$OS" == **"Rocky"** && "$OS_VER" -lt 9 ]]; then
+  elif [[ "$OS" == **"CentOS"** || "$OS" == **"Rocky"** && ${OS_VER%%.*} == 8 ]]; then
     sudo sed -Ei '/^GSSAPIAuthentication/s/yes/no/g' "$ssh_auth_file"
     # 禁止自动断链
     sudo sed -Ei 's/^#ClientAliveInterval 0/ClientAliveInterval 60/g' "$ssh_auth_file"
@@ -963,7 +963,7 @@ sshd_setting() {
   sudo sed -Ei '/^PasswordAuthentication/s/yes/no/g' "$ssh_auth_file"
   sudo sed -Ei '/^#?PermitEmptyPasswords/s/#//g' "$ssh_auth_file"
   # 禁止 root 用户登录
-  if [[ "$OS" == **"Rocky"** && "$OS_VER" -lt 9 ]]; then
+  if [[ "$OS" == **"Rocky"** && ${OS_VER%%.*} == 8 ]]; then
     sudo sed -Ei '/^PermitRootLogin/s/yes/no/g' "$ssh_auth_file"
   else
     sudo sed -Ei 's/^#PermitRootLogin.*/PermitRootLogin no/g' "$ssh_auth_file"
@@ -1430,7 +1430,7 @@ install_tengine() {
   tengine_user="nginx"
   source_path="/server/nginx/sbin/nginx"
   link_path="/usr/sbin/nginx"
-  jemalloc_dl="https://gh.api.99988866.xyz/https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2"
+  jemalloc_dl="https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2"
   tengine_dl="https://tengine.taobao.org/download/tengine-$tengine_version.tar.gz"
 
   tools=("wget" "curl" "tar" "make" "bzip2")
@@ -1444,11 +1444,13 @@ install_tengine() {
     fi
   done
 
-  mkdir -p $SOFTWARW_DL_DIR/tengine
-  sudo wget -P $SOFTWARW_DL_DIR/tengine "$jemalloc_dl"
-  sudo wget -P $SOFTWARW_DL_DIR/tengine "$tengine_dl"
-  sudo tar xjf "$SOFTWARW_DL_DIR/jemalloc-5.3.0.tar.bz2" >/dev/null
-  sudo tar xvf "$SOFTWARW_DL_DIR/tengine-$tengine_version.tar.gz" >/dev/null
+  tengine_src="$SOFTWARW_DL_DIR/tengine"
+  mkdir -p $tengine_src
+  sudo wget -P $tengine_src "$jemalloc_dl"
+  sudo wget -P $tengine_src "$tengine_dl"
+  cd $tengine_src
+  sudo tar xjf "jemalloc-5.3.0.tar.bz2" >/dev/null
+  sudo tar xvf "tengine-$tengine_version.tar.gz" >/dev/null
 
   info "*** 安装 Tengine 版本 $tdengine_version ***"
 
@@ -1480,10 +1482,10 @@ install_tengine() {
     cd "$tengine_src/jemalloc-5.3.0"
     sudo ./configure && sudo make && sudo make install
 
-    if grep -q "/usr//lib/" "/etc/ld.so.conf.d/_lib.conf"; then
+    if grep -q "/usr/local/lib/" "/etc/ld.so.conf.d/jemalloc.conf"; then
       sudo ldconfig -v
     else
-      echo "/usr//lib/" | sudo tee -a /etc/ld.so.conf.d/_lib.conf >/dev/null
+      echo "/usr/local/lib/" | sudo tee -a /etc/ld.so.conf.d/jemalloc.conf >/dev/null
       sudo ldconfig -v
     fi
 
@@ -1527,7 +1529,9 @@ install_tengine() {
       /server/nginx/tmp/proxy_temp \
       /server/nginx/tmp/fcgi_temp \
       /server/nginx/tmp/uwsgi_temp \
-      /server/nginx/tmp/scgi_temp
+      /server/nginx/tmp/scgi_temp \
+      /server/nginx/conf.d \
+      /server/nginx/certs
 
     # 检查用户是否存在
     if id "$tenging_user" &>/dev/null; then
@@ -1613,6 +1617,7 @@ EOF
       sudo chcon -R -t httpd_exec_t /server/nginx/sbin/
       sudo chcon -R -t httpd_log_t /server/nginx/log/
       sudo chcon -R -t httpd_config_t /server/nginx/conf/
+      sudo chcon -R -t httpd_config_t /server/nginx/conf.d/
       sudo chcon -R -t httpd_var_run_t /server/nginx/run/
       sudo chcon -R -t httpd_sys_content_t /server/nginx/html/
     fi
@@ -1639,15 +1644,15 @@ EOF
     done
 
     cd $SOFTWARW_DL_DIR/tengine || exit 1
-    sudo wget https://gh.api.99988866.xyz/https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2
+    sudo wget https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2
     sudo tar xjf jemalloc-5.3.0.tar.bz2
     cd jemalloc-5.3.0 || exit 1
     sudo ./configure && sudo make && sudo make install
 
-    if grep -q "/usr/lib/" "/etc/ld.so.conf.d/_lib.conf"; then
+    if grep -q "/usr/local/lib/" "/etc/ld.so.conf.d/jemalloc.conf"; then
       sudo ldconfig -v
     else
-      echo "/usr/lib/" | sudo tee -a /etc/ld.so.conf.d/_lib.conf >/dev/null
+      echo "/usr/local/lib/" | sudo tee -a /etc/ld.so.conf.d/jemalloc.conf >/dev/null
       sudo ldconfig -v
     fi
 
@@ -1675,7 +1680,7 @@ EOF
       --with-http_stub_status_module \
       --with-http_gzip_static_module \
       --with-http_random_index_module \
-      --with-jemalloc \
+      --with-jemalloc=/usr/local/lib/ \
       --with-pcre \
       --http-client-body-temp-path=/server/nginx/tmp/client_body_temp \
       --http-proxy-temp-path=/server/nginx/tmp/proxy_temp \
@@ -1694,7 +1699,9 @@ EOF
       /server/nginx/tmp/proxy_temp \
       /server/nginx/tmp/fcgi_temp \
       /server/nginx/tmp/uwsgi_temp \
-      /server/nginx/tmp/scgi_temp
+      /server/nginx/tmp/scgi_temp \
+      /server/nginx/conf.d \
+      /server/nginx/certs
 
     # 检查用户是否存在
     if id "$tenging_user" &>/dev/null; then
@@ -1976,8 +1983,8 @@ EOF
 javaDevelopEnv() {
   case ${1} in
   1)
-    OpenJDK_URL="https://mirrors.tuna.tsinghua.edu.cn/Adoptium/21/jdk/x64/linux/OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz"
-
+    #OpenJDK_URL="https://mirrors.tuna.tsinghua.edu.cn/Adoptium/21/jdk/x64/linux/OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz"
+    OpenJDK_URL="https://mirrors.huaweicloud.com/openjdk/22.0.2/openjdk-22.0.2_linux-x64_bin.tar.gz"
     # 检查 Java 是否已安装
     if [[ "$OS" == *"Rocky"* ]]; then
       if command -v java &>/dev/null; then
@@ -1994,13 +2001,14 @@ javaDevelopEnv() {
 
         # 解压 JDK
         cont "正在解压 OpenJDK..."
-        sudo tar -xzf "/$SOFTWARW_DL_DIR/OpenJDK21U-jdk_x64_linux_hotspot_21.0.4_7.tar.gz" -C "$JAVA_INSTALL_DIR"
+        sudo tar -xzf "/$SOFTWARW_DL_DIR/openjdk-22.0.2_linux-x64_bin.tar.gz" -C "$JAVA_INSTALL_DIR"
 
         # 设置环境变量
-        JAVA_HOME_DIR="$JAVA_INSTALL_DIR/jdk-21.0.4+7/"
+        JAVA_HOME_DIR="$JAVA_INSTALL_DIR/jdk-22.0.2"
         sudo rm -rf /etc/profile.d/java.sh
         echo "export JAVA_HOME=$JAVA_HOME_DIR" | sudo tee -a /etc/profile.d/java.sh
         echo "export PATH=\$PATH:\$JAVA_HOME/bin" | sudo tee -a /etc/profile.d/java.sh
+        echo "export CLASSPATH=.:$JAVA_HOME/lib" | sudo tee -a /etc/profile.d/java.sh
 
         # 重新加载环境变量
         source /etc/profile.d/java.sh
@@ -2047,7 +2055,7 @@ pythonDevelopEnv() {
     else
       yumInstall "make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev"
     fi
-    curl -L https://gh.api.99988866.xyz/https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+    curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
     echo '# pyenv' >>~/.bashrc
     echo 'export PYENV_ROOT="$HOME/.pyenv"' >>~/.bashrc
     echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >>~/.bashrc
@@ -2432,7 +2440,8 @@ install_redis() {
 Install_elk() {
   info "安装 ELK"
   # 默认参数
-  ELK_INSTALL_DIR="/data/server/elk"
+  ELK_INSTALL_DIR="/server"
+  ES_SERVER_DIR="/server/elasticsearch"
   ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
   # 默认版本号 8.15.1
   ELK_DEFAULT_VERSION="8.15.1"
@@ -2448,9 +2457,9 @@ Install_elk() {
     fi
 
     # 软件名称
-    SOFTWARW_NAME="Elasticsearch"
+    ES_SOFTWARW_NAME="elasticsearch"
 
-    info "安装 $SOFTWARW_NAME"
+    info "安装 Elasticsearch"
     # 开始安装
     while :; do
       # 提示用户输入版本号
@@ -2470,11 +2479,11 @@ Install_elk() {
 
         # 检查下载地址是否有效
         if wget --spider "$ES_DL_URL" 2>&1 | grep -q '200'; then
-          cont "创建 ELK 用户"
+          cont "创建 elasticsearch 运行进程用户"
           # 用户名规则
           while :; do
-            read -p "用户名(留空默认: elastic): " ESuserName
-            ESuserName="${ESuserName:-elastic}"
+            read -p "用户名(留空默认: elasticsearch): " ESuserName
+            ESuserName="${ESuserName:-elasticsearch}"
             if [[ "$ESuserName" =~ .*root.* || "$ESuserName" =~ .*admin.* ]]; then
               warn "用户名不能包含 ${C01}admin${CF} 或 ${C01}root${CF} ，请重新输入\n"
             elif id -u "$ESuserName" >/dev/null 2>&1; then
@@ -2520,93 +2529,142 @@ Install_elk() {
 
           # 用户创建通知
           if id "$ESuserName" &>/dev/null; then
-            success "ELK 用户 $ESuserName 密码 $ESPASSWORD 创建完成"
+            success "Elasticsearch 用户 $ESuserName 密码 $ESPASSWORD 创建完成"
           else
-            warn "ELK 用户创建失败，请手动创建。"
+            warn "Elasticsearch 用户创建失败，请手动创建。"
           fi
 
-          cont "下载地址有效，开始下载 $SOFTWARW_NAME $ELK_VER..."
-          wget -P "$ELK_DL_DIR" "$ES_DL_URL"
+          cont "下载地址有效，开始下载 $ES_SOFTWARW_NAME $ELK_VER..."
+          wget -nc -P "$ELK_DL_DIR" "$ES_DL_URL"
           success "下载完成，文件保存在 $ELK_DL_DIR"
 
           # 解压下载的文件到 $ES_DIR
           cont "开始解压文件到 $ELK_INSTALL_DIR..."
           tar -xzf "$ELK_DL_DIR/$ES_FILENAME" -C "$ELK_INSTALL_DIR"
-          success "解压完成，$SOFTWARW_NAME 已安装在 $ELK_INSTALL_DIR"
+          success "解压完成，$ES_SOFTWARW_NAME 已安装在 $ELK_INSTALL_DIR"
+          mv $ELK_INSTALL_DIR/elasticsearch-$ELK_VER $ES_SERVER_DIR
 
-          ES_HOME_DIR="$ELK_INSTALL_DIR/elasticsearch-$ELK_VER"
-          ES_CONFIG_DIR="$ES_HOME_DIR/config"
-          ES_BIN_DIR="$ES_HOME_DIR/bin"
-          ES_CONFIG_FILE="$ES_CONFIG_DIR/elasticsearch.yml"
+          ES_HOME="$ES_SERVER_DIR"
+          ES_PATH_CONF="$ES_HOME/config"
+          ES_BIN_DIR="$ES_HOME/bin"
+          ES_CONFIG_FILE="$ES_PATH_CONF/elasticsearch.yml"
 
           cont "正在修改 $ES_CONFIG_FILE 配置文件..."
 
+          ES_DATA_DIR="/data/server/elasticsearch/data"
+          ES_LOGS_DIR="/data/server/elasticsearch/logs"
+          sudo mkdir -p "$ES_DATA_DIR" "$ES_LOGS_DIR"
           # 确保文件内包含指定的注释行
+
+          # 修改 $ES_DATA_DIR 和 $ES_LOGS_DIR 文件夹的所有者为 $ESuserName
+          sudo chown -R "$ESuserName": "$ES_HOME"
+          sudo chown -R "$ESuserName": "$ES_DATA_DIR"
+          sudo chown -R "$ESuserName": "$ES_LOGS_DIR"
+          success "已将 $ES_HOME 的所有者更改为 $ESuserName"
+
+          sudo tee "$ES_CONFIG_FILE" >/dev/null <<EOF
+# 集群名称（单机时不用）
+#cluster.name: es-master
+
+# 节点名称
+node.name: es-node-1
+
+# 数据存放目录
+path.data: /data/server/elasticsearch/data
+
+# 日志存放目录
+path.logs: /data/server/elasticsearch/logs
+
+# 修改 network.host 为 0.0.0.0，表示对外开放，如对特定ip开放则改为指定ip
+network.host: 0.0.0.0
+
+# 配置端口，默认为9200，可更改端口不为9200
+http.port: 9200
+
+# 初始主节点
+cluster.initial_master_nodes: ["es-node-1"]
+
+# 下面的两个配置在安装elasticsearch-head的时候会用到
+# 开启跨域访问支持，默认为false
+#http.cors.enabled: true
+# 跨域访问允许的域名地址，(允许所有域名)以上使用正则
+#http.cors.allow-origin: "*"
+
+EOF
           grep -q "#node.name: node-1" "$ES_CONFIG_FILE" || echo "#node.name: node-1" >>"$ES_CONFIG_FILE"
           #grep -q "#path.data: /path/to/data" "$ES_CONFIG_FILE" || echo "#path.data: /path/to/data" >>"$ES_CONFIG_FILE"
           #grep -q "#path.logs: /path/to/logs" "$ES_CONFIG_FILE" || echo "#path.logs: /path/to/logs" >>"$ES_CONFIG_FILE"
 
           # 在指定行下方添加相应的配置
-          sed -i "/#node.name: node-1/a ## elastic节点名字\nnode.name: node-1" "$ES_CONFIG_FILE"
+          sed -i "/#node.name: node-1/a ## elastic节点名字\nnode.name: es-node-1" "$ES_CONFIG_FILE"
           #sed -i "/#path.data: \/path\/to\/data/a ## 数据存放目录\npath.data: $ES_DATA_DIR" "$ES_CONFIG_FILE"
           #sed -i "/#path.logs: \/path\/to\/logs/a ## 日志存放目录\npath.logs: $ES_LOGS_DIR" "$ES_CONFIG_FILE"
           sed -i "/#network.host:/a ## 对所有IP开放，可以根据需求修改\nnetwork.host: 0.0.0.0" "$ES_CONFIG_FILE"
 
           success "$ES_CONFIG_FILE 配置文件修改完成."
 
-          # 修改 $ES_DATA_DIR 和 $ES_LOGS_DIR 文件夹的所有者为 $ESuserName
-          sudo chown -R "$ESuserName": "$ES_HOME_DIR"
-          success "已将 $ES_HOME_DIR 的所有者更改为 $ESuserName"
-
           # 添加启动脚本
-          cont "正在添加 $SOFTWARW_NAME 启动脚本..."
+          cont "正在添加 $ES_SOFTWARW_NAME 启动脚本..."
           sudo tee /etc/systemd/system/elasticsearch.service >/dev/null <<EOF
 [Unit]
 Description=ElasticSearch
 After=network.target
  
 [Service]
-Type=simple
+Type=forking
 User=$ESuserName
 Group=$ESuserName
-ExecStart=$ES_BIN_DIR/elasticsearch -d -p $ES_HOME_DIR/elasticsearch.pid
+ExecStart=$ES_BIN_DIR/elasticsearch -d -p $ES_DATA_DIR/es.pid
 ExecStop=$ES_BIN_DIR/elasticsearch stop
-PIDFile=$ES_HOME_DIR/elasticsearch.pid
+PIDFile=$ES_DATA_DIR/es.pid
+PrivateTmp=true
 # 修改线程数限制
 LimitNPROC=65535
 # 修改文件描述符限制
 LimitNOFILE=65535
- 
+# 最大虚拟内存
+LimitAS=infinity
+# 最大文件大小
+LimitFSIZE=infinity
+# 超时设置 0-永不超时
+TimeoutStopSec=0
+# 正常退出状态
+SuccessExitStatus=143
+
 [Install]
 WantedBy=multi-user.target
 EOF
 
-          success "$SOFTWARW_NAME 启动脚本已成功添加到 /etc/systemd/system/elasticsearch.service."
+
+          success "$ES_SOFTWARW_NAME 启动脚本已成功添加到 /etc/systemd/system/elasticsearch.service."
 
           # 重新加载 systemd 管理器配置
           sudo systemctl daemon-reload
 
           # 启动 Elasticsearch 服务
           sleep 3
-          sudo systemctl start elasticsearch
+          #sudo systemctl start elasticsearch
           sleep 3
-          sudo systemctl enable elasticsearch
+          #sudo systemctl enable elasticsearch
 
-          success "$SOFTWARW_NAME 服务已启动并设置为开机自启."
+          success "$ES_SOFTWARW_NAME 服务已启动并设置为开机自启."
 
           # 检查并更新 PATH
           ES_PROFILE="/etc/profile.d/elasticsearch.sh"
-          cont "正在检查 /etc/profile.d/elasticsearch.sh 是否包含 $SOFTWARW_NAME 的 bin 目录..."
+          cont "正在检查 /etc/profile.d/elasticsearch.sh 是否包含 $ES_SOFTWARW_NAME 的 bin 目录..."
           sudo touch $ES_PROFILE
 
           if ! grep -q "export PATH=.*$ES_BIN_DIR" "$ES_PROFILE"; then
             echo "# Elasticsearch" | sudo tee -a "$ES_PROFILE" >/dev/null
+            echo "export ES_HOME=$ES_HOME" | sudo tee -a "$ES_PROFILE" >/dev/null
             echo "export PATH=\$PATH:$ES_BIN_DIR" | sudo tee -a "$ES_PROFILE" >/dev/null
+            echo "export ES_PATH_CONF=$ES_HOME/config" | sudo tee -a "$ES_PROFILE" >/dev/null
+            echo "export ELASTIC_PASSWORD==\$PATH:$ESPASSWORD" | sudo tee -a "$ES_PROFILE" >/dev/null
 
             # 重新加载环境变量
-            source $ES_PROFILE
+            source /etc/profile.d/elasticsearch.sh
 
-            success "已将 $SOFTWARW_NAME 的 bin 目录添加到 PATH 中."
+            success "已将 $ES_SOFTWARW_NAME 的 bin 目录添加到 PATH 中."
 
             #cont "为 elastic 创建密码"
             #elasticsearch-reset-password -u elastic -i
@@ -2619,14 +2677,11 @@ EOF
               sed -i "s|$ES_BASE_DIR-[0-9.]+/bin|$ES_BASE_DIR-$ELK_VER/bin|g" "$ES_PROFILE"
               success "已将 Elasticsearch 的版本从 $CURRENT_VER 更新到 $ELK_VER。"
             else
-              success "Elasticsearch 的版本已经是最新的 ($CURRENT_VER)。"
+              success "Elasticsearch 版本 ($CURRENT_VER)。"
             fi
           else
             warn "Elasticsearch 的 bin 目录已存在于 PATH 中。"
           fi
-
-          # 重新加载环境变量
-          source $ES_PROFILE
 
           # 可选：清理下载的压缩文件
           #rm "$ELK_INSTALL_DIR/elasticsearch-$ELK_VER-linux-x86_64.tar.gz"
@@ -2642,12 +2697,13 @@ EOF
     ;;
   2)
     # 软件名称
-    SOFTWARW_NAME="Logstash"
-    info "安装 $SOFTWARW_NAME"
+    LS_SOFTWARW_NAME="logstash"
+    info "安装 Logstash"
 
     # 默认参数
-    ELK_INSTALL_DIR="/data/server/elk"
+    ELK_INSTALL_DIR="/server/elk"
     ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
+    LS_SERVER_DIR="/server/elk/$LS_SOFTWARW_NAME"
     # 默认版本号 8.15.1
     ELK_DEFAULT_VERSION="8.15.1"
     # 创建所需的目录
@@ -2713,21 +2769,22 @@ EOF
           done
 
           cont "下载地址有效，开始下载 Logstash $ELK_VER..."
-          wget -P "$ELK_DL_DIR" "$LS_DL_URL"
+          wget -nc -P "$ELK_DL_DIR" "$LS_DL_URL"
           success "下载完成，文件保存在 $ELK_DL_DIR"
 
           # 解压下载的文件到 $ELK_VER
           cont "开始解压文件到 $ELK_INSTALL_DIR..."
           tar -xzf "$ELK_DL_DIR/$LS_FILENAME" -C "$ELK_INSTALL_DIR"
           success "解压完成，Logstash 已安装在 $ELK_INSTALL_DIR"
+          mv $ELK_INSTALL_DIR/logstash-$ELK_VER $LS_SERVER_DIR
 
-          LS_HOME_DIR="$ELK_INSTALL_DIR/logstash-$ELK_VER"
+          LS_HOME_DIR="$LS_SERVER_DIR"
           LS_CONFIG_DIR="$LS_HOME_DIR/config"
           LS_BIN_DIR="$LS_HOME_DIR/bin"
           LS_CONFIG_FILE="$LS_CONFIG_DIR/logstash.conf"
 
-          ES_HOME_DIR="$ELK_INSTALL_DIR/elasticsearch-$ELK_VER"
-          ES_CONFIG_DIR="$ES_HOME_DIR/config"
+          ES_HOME="$ELK_INSTALL_DIR/elasticsearch-$ELK_VER"
+          ES_PATH_CONF="$ES_HOME/config"
 
           cont "正在修改 $LS_CONFIG_FILE 配置文件..."
           mkdir -p $LS_CONFIG_DIR
@@ -2749,7 +2806,7 @@ output {
     user => "$ESuserName"
     password => "$ESPASSWORD"
     index => "index-test"
-    cacert => "$ES_CONFIG_DIR/certs/http_ca.crt"
+    cacert => "$ES_PATH_CONF/certs/http_ca.crt"
   }
   stdout {
     codec => rubydebug
@@ -2772,7 +2829,7 @@ Description=Logstash service
 After=network.target
  
 [Service]
-Type=simple
+Type=forking
 User=$ESuserName
 Group=$ESuserName
 ExecStart=$LS_BIN_DIR/logstash -f $LS_CONFIG_FILE
@@ -2837,16 +2894,17 @@ EOF
     ;;
   3)
     # 软件名称
-    SOFTWARW_NAME="Kibana"
-    info "安装 #$SOFTWARW_NAME"
+    KB_SOFTWARW_NAME="kibana"
+    info "安装 Kibana"
 
     # 默认参数
-    ELK_INSTALL_DIR="/data/server/elk"
+    ELK_INSTALL_DIR="/server"
     ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
+    KB_SERVER_DIR="$ELK_INSTALL_DIR/kibana"
     # 默认版本号 8.15.1
     ELK_DEFAULT_VERSION="8.15.1"
     # 创建所需的目录
-    sudo mkdir -p "$ELK_DL_DIR" "$ELK_INSTALL_DIR"
+    sudo mkdir -p "$ELK_DL_DIR" "$ELK_INSTALL_DIR" 
 
     # 开始安装
     while :; do
@@ -2869,34 +2927,74 @@ EOF
         if wget --spider "$KB_DL_URL" 2>&1 | grep -q '200'; then
           cont "下载地址有效，开始下载 Kibana $ELK_VER..."
 
+          cont "创建 Kibana 运行进程用户"
           # 用户名规则
           while :; do
-            read -p "输入 Elasticsearch 用户名(留空默认: elastic): " ESuserName
-            ESuserName="${ESuserName:-elastic}"
-            if [[ "$ESuserName" =~ .*root.* || "$ESuserName" =~ .*admin.* ]]; then
+            read -p "用户名(留空默认: kibana): " KBuserName
+            KBuserName="${KBuserName:-kibana}"
+            if [[ "$KBuserName" =~ .*root.* || "$KBuserName" =~ .*admin.* ]]; then
               warn "用户名不能包含 ${C01}admin${CF} 或 ${C01}root${CF} ，请重新输入\n"
-            elif ! id "$ESuserName" &>/dev/null; then
-              warn "用户 $ESuserName 不存在，请重新输入\n"
-            elif echo "$ESuserName" | grep -qP '[\p{Han}]'; then
+            elif id -u "$KBuserName" >/dev/null 2>&1; then
+              warn "用户 \"$KBuserName\" 已存在，请重新输入\\n"
+            elif echo "$KBuserName" | grep -qP '[\p{Han}]'; then
               warn "用户名不能包含<中文>，请重新输入\n"
-            elif [ -z "$ESuserName" ]; then
+            elif [ -z "$KBuserName" ]; then
               warn "用户名不能为<空>，请重新输入\n"
             else
               break
             fi
           done
 
-          wget -P "$ELK_DL_DIR" "$KB_DL_URL"
+          # 提示输入密码
+          while :; do
+            read -rp "输入密码(密码输入已隐藏): " -s KBPASSWD
+            echo ''
+            if [ -z "$KBPASSWD" ]; then
+              warn "密码不能为<空>，请重新输入\n"
+              continue
+            elif [[ ${#KBPASSWD} -lt 8 || ! "$KBPASSWD" =~ [A-Z] || ! "$KBPASSWD" =~ [a-z] ]]; then
+              warn "密码必须至少8个字符，包括至少1个大写字母和1个小写字母，请重新输入\n"
+              continue
+            fi
+            read -rp "再次确认密码: " -s KBPASSWORD
+            echo ''
+
+            if [ "$KBPASSWD" != "$KBPASSWORD" ]; then
+              warn "两次密码验证失败，请重新输入\n"
+              continue
+            else
+              break
+            fi
+          done
+
+          # 添加用户及密码
+          sudo useradd -s /sbin/nologin "$KBuserName"
+          if [[ "$OS" == *"Ubuntu"* ]]; then
+            sudo echo "$KBuserName:$KBPASSWORD" | sudo chpasswd >/dev/null 2>&1
+          else
+            sudo echo "$KBPASSWORD" | passwd --stdin "$KBuserName" >/dev/null 2>&1
+          fi
+
+          # 用户创建通知
+          if id "$KBuserName" &>/dev/null; then
+            success "Kibana 用户 $KBuserName 密码 $KBPASSWORD 创建完成"
+          else
+            warn "Kibana 用户创建失败，请手动创建。"
+          fi
+
+
+          wget -nc -P "$ELK_DL_DIR" "$KB_DL_URL"
           success "下载完成，文件保存在 $ELK_INSTALL_DIR"
 
           # 解压下载的文件到 $ELK_INSTALL_DIR
           cont "开始解压文件到 $ELK_INSTALL_DIR..."
           tar -xzf "$ELK_DL_DIR/$KB_FILENAME" -C "$ELK_INSTALL_DIR"
           success "解压完成，Kibana 已安装在 $ELK_INSTALL_DIR"
+          mv $ELK_INSTALL_DIR/kibana-$ELK_VER $KB_SERVER_DIR
 
-          KB_HOME_DIR="$ELK_INSTALL_DIR/kibana-$ELK_VER"
-          KB_CONFIG_DIR="$KB_HOME_DIR/config"
-          KB_BIN_DIR="$KB_HOME_DIR/bin"
+          KIBANA_HOME="$KB_SERVER_DIR"
+          KB_CONFIG_DIR="$KIBANA_HOME/config"
+          KB_BIN_DIR="$KIBANA_HOME/bin"
           KB_CONFIG_FILE="$KB_CONFIG_DIR/kibana.yml"
 
           cont "设置 Kibana 访问地址..."
@@ -2935,6 +3033,18 @@ EOF
 
           cont "正在修改 $KB_CONFIG_FILE 配置文件..."
 
+          KB_DATA_BASE="/data/server/kibana"
+          KB_DATA_DIR="$KB_DATA_BASE/data"
+          KB_LOGS_DIR="$KB_DATA_BASE/logs"
+          sudo mkdir -p "$KB_DATA_DIR" "$KB_LOGS_DIR"
+          # 确保文件内包含指定的注释行
+
+          # 修改 $KB_DATA_DIR 和 $KB_LOGS_DIR 文件夹的所有者为 $ESuserName
+          sudo chown -R "$ESuserName": "$KIBANA_HOME"
+          sudo chown -R "$ESuserName": "$KB_DATA_BASE"
+          success "已将 $KIBANA_HOME 的所有者更改为 $ESuserName"
+
+
           # 确保文件内包含指定的注释行
           grep -q "#server.port: 5601" "$KB_CONFIG_FILE" || echo "#server.port: 5601" >>"$KB_CONFIG_FILE"
           grep -q "#server.host: \"localhost\"" "$KB_CONFIG_FILE" || echo "#server.host: \"localhost\"" >>"$KB_CONFIG_FILE"
@@ -2946,14 +3056,15 @@ EOF
           sed -i "/#server.host: \"localhost\"/a ## 访问地址\nserver.host: \"$KB_Host\"" "$KB_CONFIG_FILE"
           sed -i "/#elasticsearch.ssl.verificationMode: full/a ## 修改认证模式为 none\nelasticsearch.ssl.verificationMode: none" "$KB_CONFIG_FILE"
           sed -i "/#server.publicBaseUrl: \"\"/a ## 互联网访问地址\nserver.publicBaseUrl: \"http://$MYIP:$KB_Port\"" "$KB_CONFIG_FILE"
-          #sed -i "/#path.data: data/a ## 数据存放目录\npath.data: $KB_DATA_DIR" "$KB_CONFIG_FILE"
+          sed -i "/#path.data: data/a ## 数据存放目录\npath.data: $KB_DATA_DIR" "$KB_CONFIG_FILE"
+          sed -i "/##pid.file: /run/kibana/kibana.pid/a ## PID存放目录\npid.file: $KB_DATA_DIR/kibana.pid" "$KB_CONFIG_FILE"
           sed -i "/#i18n.locale: \"en\"/a ## 使用中文语言\ni18n.locale: \"zh-CN\"" "$KB_CONFIG_FILE"
 
           success "$KB_CONFIG_FILE 配置文件修改完成."
 
           # 修改 $KB_DATA_DIR 和 $KB_LOGS_DIR 文件夹的所有者为 $ESuserName
-          sudo chown -R "$ESuserName": "$KB_HOME_DIR"
-          success "已将 $KB_HOME_DIR 的所有者更改为 $ESuserName"
+          sudo chown -R "$KBuserName": "$KIBANA_HOME"
+          success "已将 $KIBANA_HOME 的所有者更改为 $KBuserName"
 
           # 添加启动脚本
           cont "正在添加 Kibana 启动脚本..."
@@ -2964,8 +3075,8 @@ After=network.target
  
 [Service]
 Type=simple
-User=$ESuserName
-Group=$ESuserName
+User=$KBuserName
+Group=$KBuserName
 ExecStart=$KB_BIN_DIR/kibana
 Restart=always
  
@@ -2980,9 +3091,9 @@ EOF
 
           # 启动 Kibana 服务
           sleep 3
-          sudo systemctl start kibana
+          #sudo systemctl start kibana
           sleep 3
-          sudo systemctl enable kibana
+          #sudo systemctl enable kibana
 
           success "Kibana 服务已启动并设置为开机自启."
 
@@ -2994,10 +3105,11 @@ EOF
 
           if ! grep -q "export PATH=.*$KB_BIN_DIR" "$KB_PROFILE"; then
             echo "# Kibana" | sudo tee -a "$KB_PROFILE" >/dev/null
-            echo "export PATH=\$PATH:$KB_BIN_DIR" | sudo tee -a "$KB_PROFILE" >/dev/null
+            echo "export KIBANA_HOME=$KIBANA_HOME" | sudo tee -a "$KB_PROFILE" >/dev/null
+            echo "export PATH=\$PATH:$KIBANA_HOME/bin" | sudo tee -a "$KB_PROFILE" >/dev/null
 
             # 重新加载环境变量
-            source $KB_PROFILE
+            source /etc/profile.d/kibana.sh
 
             success "已将 Kibana 的 bin 目录添加到 PATH 中."
 
@@ -3038,11 +3150,11 @@ EOF
 }
 
 Install_Filebeat() {
-  SOFTWARW_NAME="filebeat"
-  info "安装 $SOFTWARW_NAME"
+  FB_SOFTWARW_NAME="filebeat"
+  info "安装 Filebeat"
   # 默认参数
 
-  ELK_INSTALL_DIR="/data/server/elk"
+  ELK_INSTALL_DIR="/server/elk"
   ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
   # 默认版本号
   FB_DEFAULT_VERSION="8.15.1"
@@ -3062,7 +3174,7 @@ Install_Filebeat() {
     if [[ "$FB_VER" =~ $VERSION_REGEX ]]; then
       # 拼接下载地址
       FB_BASE_URL="https://artifacts.elastic.co/downloads/beats/filebeat"
-      FB_FILENAME="$SOFTWARW_NAME-$FB_VER-linux-x86_64.tar.gz"
+      FB_FILENAME="$FB_SOFTWARW_NAME-$FB_VER-linux-x86_64.tar.gz"
       FB_DL_URL="$FB_BASE_URL/$FB_FILENAME"
 
       # 检查下载地址是否有效
@@ -3105,19 +3217,19 @@ Install_Filebeat() {
 
         # 提示输入密码
         while :; do
-          read -rp "输入 ES超级用户 elastic 的密码(密码输入已隐藏): " -s ESPASSWD
+          read -rp "输入 ES超级用户 elastic 的密码(密码输入已隐藏): " -s KBPASSWD
           echo ''
-          if [ -z "$ESPASSWD" ]; then
+          if [ -z "$KBPASSWD" ]; then
             warn "密码不能为<空>，请重新输入\n"
             continue
-          elif [[ ${#ESPASSWD} -lt 8 || ! "$ESPASSWD" =~ [A-Z] || ! "$ESPASSWD" =~ [a-z] ]]; then
+          elif [[ ${#KBPASSWD} -lt 8 || ! "$KBPASSWD" =~ [A-Z] || ! "$KBPASSWD" =~ [a-z] ]]; then
             warn "密码必须至少8个字符，包括至少1个大写字母和1个小写字母，请重新输入\n"
             continue
           fi
-          read -rp "再次确认密码: " -s ESPASSWORD
+          read -rp "再次确认密码: " -s KBPASSWORD
           echo ''
 
-          if [ "$ESPASSWD" != "$ESPASSWORD" ]; then
+          if [ "$KBPASSWD" != "$KBPASSWORD" ]; then
             warn "两次密码验证失败，请重新输入\n"
             continue
           else
@@ -3127,9 +3239,9 @@ Install_Filebeat() {
 
         cont "正在修改 $FB_CONFIG_FILE 配置文件..."
 
-        FB_HOME_DIR="$ELK_INSTALL_DIR/$SOFTWARW_NAME-$FB_VER-linux-x86_64"
+        FB_HOME_DIR="$ELK_INSTALL_DIR/$FB_SOFTWARW_NAME-$FB_VER-linux-x86_64"
         FB_BIN_DIR="$FB_HOME_DIR"
-        FB_CONFIG_FILE="$FB_HOME_DIR/$SOFTWARW_NAME.yml"
+        FB_CONFIG_FILE="$FB_HOME_DIR/$FB_SOFTWARW_NAME.yml"
 
         # 确保文件内包含指定的行
         grep -q "output.elasticsearch:" "$FB_CONFIG_FILE" || echo "output.elasticsearch:" >>"$FB_CONFIG_FILE"
@@ -3163,14 +3275,14 @@ Install_Filebeat() {
   N
   N
   N
-  s/#password: \"changeme\"/password: \"$ESPASSWORD\"/
+  s/#password: \"changeme\"/password: \"$KBPASSWORD\"/
 }" $FB_CONFIG_FILE
         #sed -i "/#password:/a ## 访问端口\nserver.port: $KB_Port" "$KB_CONFIG_FILE"
 
         success "$FB_CONFIG_FILE 配置文件修改完成."
 
         # 添加启动脚本
-        cont "正在添加 $SOFTWARW_NAME 启动脚本..."
+        cont "正在添加 $FB_SOFTWARW_NAME 启动脚本..."
         sudo tee /etc/systemd/system/filebeat.service >/dev/null <<EOF
 [Unit]
 Description=Filebeat sends log files to Logstash or directly to Elasticsearch.
@@ -3179,6 +3291,7 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
+Type=forking
 Environment="BEAT_LOG_OPTS=-e"
 Environment="BEAT_CONFIG_OPTS=-c $FB_HOME_DIR/filebeat.yml"
 Environment="BEAT_PATH_OPTS=-path.home $FB_HOME_DIR  -path.config $FB_HOME_DIR -path.data $FB_HOME_DIR/data -path.logs $FB_HOME_DIR/logs"
@@ -3189,7 +3302,7 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-        success "$SOFTWARW_NAME 启动脚本已成功添加到 /etc/systemd/system/filebeat.service."
+        success "$FB_SOFTWARW_NAME 启动脚本已成功添加到 /etc/systemd/system/filebeat.service."
 
         # 重新加载 systemd 管理器配置
         sudo systemctl daemon-reload
@@ -3200,11 +3313,11 @@ EOF
         sleep 3
         sudo systemctl enable filebeat
 
-        success "$SOFTWARW_NAME 服务已启动并设置为开机自启."
+        success "$FB_SOFTWARW_NAME 服务已启动并设置为开机自启."
 
         # 检查并更新 PATH
         FB_PROFILE="/etc/profile.d/filebeat.sh"
-        cont "正在检查 /etc/profile.d/filebeat.sh 是否包含 $SOFTWARW_NAME 的 bin 目录..."
+        cont "正在检查 /etc/profile.d/filebeat.sh 是否包含 $FB_SOFTWARW_NAME 的 bin 目录..."
         sudo touch $FB_PROFILE
 
         if ! grep -q "export PATH=.*$FB_BIN_DIR" "$FB_PROFILE"; then
@@ -3214,7 +3327,7 @@ EOF
           # 重新加载环境变量
           source $FB_PROFILE
 
-          success "已将 $SOFTWARW_NAME 的 bin 目录添加到 PATH 中."
+          success "已将 $FB_SOFTWARW_NAME 的 bin 目录添加到 PATH 中."
           break
         else
           warn "下载地址无效，请重新输入版本号。"
@@ -3231,11 +3344,11 @@ EOF
 Install_frp() {
   case ${1} in
   1)
-    SOFTWARW_NAME="frp"
+    FRPS_SOFTWARW_NAME="frps"
     info "安装 frp 服务端"
     # 默认参数
 
-    FRPS_INSTALL_DIR="/data/server"
+    FRPS_INSTALL_DIR="/usr/local/"
     FRPS_DL_DIR="$SOFTWARW_DL_DIR"
     # 默认版本号
     FRPS_DEFAULT_VERSION="0.59.0"
@@ -3254,8 +3367,8 @@ Install_frp() {
       # 检查版本号格式
       if [[ "$FRPS_VER" =~ $VERSION_REGEX ]]; then
         # 拼接下载地址
-        FRPS_BASE_URL="https://gh.api.99988866.xyz/https://github.com/fatedier/$SOFTWARW_NAME/releases/download/v$FRPS_VER"
-        FRPS_FILENAME="${SOFTWARW_NAME}_${FRPS_VER}_linux_amd64.tar.gz"
+        FRPS_BASE_URL="https://github.com/fatedier/frp/releases/download/v$FRPS_VER"
+        FRPS_FILENAME="frp_${FRPS_VER}_linux_amd64.tar.gz"
         FRPS_DL_URL="$FRPS_BASE_URL/$FRPS_FILENAME"
 
         # 检查下载地址是否有效
@@ -3349,7 +3462,7 @@ Install_frp() {
           tar -xzf "$FRPS_DL_DIR/$FRPS_FILENAME" -C "$FRPS_INSTALL_DIR"
           success "frp 已安装在 $FRPS_INSTALL_DIR"
 
-          FRPS_SOFT_DIR="$FRPS_INSTALL_DIR/${SOFTWARW_NAME}_${FRPS_VER}_linux_amd64"
+          FRPS_SOFT_DIR="$FRPS_INSTALL_DIR/frp_${FRPS_VER}_linux_amd64"
           mv $FRPS_SOFT_DIR $FRPS_INSTALL_DIR/frps
           FRPS_HOME_DIR="$FRPS_INSTALL_DIR/frps"
           rm -rf $FRPC_HOME_DIR/frpc*
@@ -3433,14 +3546,14 @@ EOF
     done
     ;;
   2)
-    SOFTWARW_NAME="frp"
+    FRPC_SOFTWARW_NAME="frpc"
     info "安装 frp 客户端"
     # 默认参数
 
-    FRPC_INSTALL_DIR="/data/server"
+    FRPC_INSTALL_DIR="/usr/local"
     FRPC_DL_DIR="$SOFTWARW_DL_DIR"
     # 默认版本号
-    FRPC_DEFAULT_VERSION="0.59.0"
+    FRPC_DEFAULT_VERSION="0.60.0"
     # 创建所需的目录
     sudo mkdir -p "$FRPC_DL_DIR" "$FRPC_INSTALL_DIR"
 
@@ -3456,8 +3569,8 @@ EOF
       # 检查版本号格式
       if [[ "$FRPC_VER" =~ $VERSION_REGEX ]]; then
         # 拼接下载地址
-        FRPC_BASE_URL="https://gh.api.99988866.xyz/https://github.com/fatedier/$SOFTWARW_NAME/releases/download/v$FRPC_VER"
-        FRPC_FILENAME="${SOFTWARW_NAME}_${FRPC_VER}_linux_amd64.tar.gz"
+        FRPC_BASE_URL="https://github.com/fatedier/frp/releases/download/v$FRPC_VER"
+        FRPC_FILENAME="frp_${FRPC_VER}_linux_amd64.tar.gz"
         FRPC_DL_URL="$FRPC_BASE_URL/$FRPC_FILENAME"
 
         # 检查下载地址是否有效
@@ -3477,13 +3590,13 @@ EOF
 
           cont "下载地址有效，设置 frp 服务器 访问端口..."
           while :; do
-            read -rp "请输入 frp 服务器访问端口(留空默认: 7999): " FRPC_SPort
-            FRPC_SPort="${FRPC_SPort:-7999}"
-            if [[ ! $FRPC_SPort =~ ^[0-9]+$ ]]; then
+            read -rp "请输入 frp 服务器访问端口(留空默认: 7999): " FRPC_Port
+            FRPC_Port="${FRPC_Port:-7999}"
+            if [[ ! $FRPC_Port =~ ^[0-9]+$ ]]; then
               warn "端口仅支持数字，请重新输入!"
-            elif [ "$FRPC_SPort" -lt "1024" ]; then
+            elif [ "$FRPC_Port" -lt "1024" ]; then
               warn "端口号不能小于 1024，请重新输入!"
-            elif [ "$FRPC_SPort" -gt "65535" ]; then
+            elif [ "$FRPC_Port" -gt "65535" ]; then
               warn "端口号不能大于 65535，请重新输入!"
             else
               break
@@ -3499,7 +3612,7 @@ EOF
           tar -xzf "$FRPC_DL_DIR/$FRPC_FILENAME" -C "$FRPC_INSTALL_DIR"
           success "frpc 已安装在 $FRPC_INSTALL_DIR"
 
-          FRPC_SOFT_DIR="$FRPC_INSTALL_DIR/${SOFTWARW_NAME}_${FRPC_VER}_linux_amd64"
+          FRPC_SOFT_DIR="$FRPC_INSTALL_DIR/frp_${FRPC_VER}_linux_amd64"
           mv $FRPC_SOFT_DIR $FRPC_INSTALL_DIR/frpc
           FRPC_HOME_DIR="$FRPC_INSTALL_DIR/frpc"
           rm -rf $FRPC_HOME_DIR/frps*
@@ -3512,9 +3625,9 @@ EOF
           cat /dev/null >$FPRC_CONFIG_FILE
           sudo tee $FPRC_CONFIG_FILE >/dev/null <<EOF
 # 服务端IP地址
-serverAddr = "$FRPC_SHost"
+serverAddr = "$FRPC_Host"
 # 服务端通信端口
-serverPort = $FRPC_SPort
+serverPort = $FRPC_Port
 
 # 鉴权方式
 auth.method = "token"
@@ -3744,7 +3857,7 @@ main() {
       welcome
       CD
       changeSourceForChina 1
-      update_and_upgrade_system
+      #update_and_upgrade_system
       basic_tools_install
       disable_services
       disable_selinux
