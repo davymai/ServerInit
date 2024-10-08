@@ -2440,7 +2440,7 @@ install_redis() {
 Install_elk() {
   info "安装 ELK"
   # 默认参数
-  ELK_INSTALL_DIR="/server"
+  ELK_INSTALL_DIR="/data/server/elk"
   ES_SERVER_DIR="/server/elasticsearch"
   ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
   # 默认版本号 8.15.1
@@ -2701,7 +2701,7 @@ EOF
     info "安装 Logstash"
 
     # 默认参数
-    ELK_INSTALL_DIR="/server/elk"
+    ELK_INSTALL_DIR="/data/server/elk"
     ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
     LS_SERVER_DIR="/server/elk/$LS_SOFTWARW_NAME"
     # 默认版本号 8.15.1
@@ -2898,7 +2898,7 @@ EOF
     info "安装 Kibana"
 
     # 默认参数
-    ELK_INSTALL_DIR="/server"
+    ELK_INSTALL_DIR="/data/server/elk"
     ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
     KB_SERVER_DIR="$ELK_INSTALL_DIR/kibana"
     # 默认版本号 8.15.1
@@ -3154,7 +3154,7 @@ Install_Filebeat() {
   info "安装 Filebeat"
   # 默认参数
 
-  ELK_INSTALL_DIR="/server/elk"
+  ELK_INSTALL_DIR="/data/server/elk"
   ELK_DL_DIR="$SOFTWARW_DL_DIR/elk"
   # 默认版本号
   FB_DEFAULT_VERSION="8.15.1"
@@ -3242,6 +3242,8 @@ Install_Filebeat() {
         FB_HOME_DIR="$ELK_INSTALL_DIR/$FB_SOFTWARW_NAME-$FB_VER-linux-x86_64"
         FB_BIN_DIR="$FB_HOME_DIR"
         FB_CONFIG_FILE="$FB_HOME_DIR/$FB_SOFTWARW_NAME.yml"
+
+        sudo cp "$FB_CONFIG_FILE" "$FB_CONFIG_FILE.bak$(date +%Y%m%d%-H%M%S)"
 
         # 确保文件内包含指定的行
         grep -q "output.elasticsearch:" "$FB_CONFIG_FILE" || echo "output.elasticsearch:" >>"$FB_CONFIG_FILE"
