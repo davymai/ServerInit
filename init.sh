@@ -1873,7 +1873,7 @@ install_mongodb() {
     cont "添加 MongoDB ${C3}清华大学${CF} 源镜像..."
 
     if [[ "$OS" == *"CentOS"* ]]; then
-      cat >/etc/yum.repos.d/mongodb.repo <<EOF
+      cat >/etc/yum.repos.d/mongodb-org-4.4.repo <<EOF
 [mongodb-org]
 name=MongoDB Repository
 baseurl=https://mirrors.tuna.tsinghua.edu.cn/mongodb/yum/el7\$releasever/7-4.2/
@@ -1886,7 +1886,7 @@ EOF
       cat >/etc/yum.repos.d/mongodb.repo <<EOF
 [mongodb-org-4.4]
 name=MongoDB Repository
-baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.4/x86_64/
+baseurl=https://repo.mongodb.org/yum/redhat/\$releasever/mongodb-org/4.4/x86_64/
 gpgcheck=1
 enabled=1
 gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc

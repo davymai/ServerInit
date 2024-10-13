@@ -1,0 +1,600 @@
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306001"
+          replacement: "精英001关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306002"
+          replacement: "精英002关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306003"
+          replacement: "精英003关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306004"
+          replacement: "精英004关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306005"
+          replacement: "精英005关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306006"
+          replacement: "精英006关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306007"
+          replacement: "精英007关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306008"
+          replacement: "精英008关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306009"
+          replacement: "精英009关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306010"
+          replacement: "精英010关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306011"
+          replacement: "精英011关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306012"
+          replacement: "精英012关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306013"
+          replacement: "精英013关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306014"
+          replacement: "精英014关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306015"
+          replacement: "精英015关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306016"
+          replacement: "精英016关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306017"
+          replacement: "精英017关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306018"
+          replacement: "精英018关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306019"
+          replacement: "精英019关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306020"
+          replacement: "精英020关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306021"
+          replacement: "精英021关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306022"
+          replacement: "精英022关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306023"
+          replacement: "精英023关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306024"
+          replacement: "精英024关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306025"
+          replacement: "精英025关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306026"
+          replacement: "精英026关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306027"
+          replacement: "精英027关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306028"
+          replacement: "精英028关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306029"
+          replacement: "精英029关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306030"
+          replacement: "精英030关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306031"
+          replacement: "精英031关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306032"
+          replacement: "精英032关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306033"
+          replacement: "精英033关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306034"
+          replacement: "精英034关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306035"
+          replacement: "精英035关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306036"
+          replacement: "精英036关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306037"
+          replacement: "精英037关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306038"
+          replacement: "精英038关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306039"
+          replacement: "精英039关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306040"
+          replacement: "精英040关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306041"
+          replacement: "精英041关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306042"
+          replacement: "精英042关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306043"
+          replacement: "精英043关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306044"
+          replacement: "精英044关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306045"
+          replacement: "精英045关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306046"
+          replacement: "精英046关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306047"
+          replacement: "精英047关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306048"
+          replacement: "精英048关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306049"
+          replacement: "精英049关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306050"
+          replacement: "精英050关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306051"
+          replacement: "精英051关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306052"
+          replacement: "精英052关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306053"
+          replacement: "精英053关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306054"
+          replacement: "精英054关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306055"
+          replacement: "精英055关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306056"
+          replacement: "精英056关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306057"
+          replacement: "精英057关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306058"
+          replacement: "精英058关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306059"
+          replacement: "精英059关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306060"
+          replacement: "精英060关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306061"
+          replacement: "精英061关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306062"
+          replacement: "精英062关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306063"
+          replacement: "精英063关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306064"
+          replacement: "精英064关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306065"
+          replacement: "精英065关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306066"
+          replacement: "精英066关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306067"
+          replacement: "精英067关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306068"
+          replacement: "精英068关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306069"
+          replacement: "精英069关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306070"
+          replacement: "精英070关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306071"
+          replacement: "精英071关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306072"
+          replacement: "精英072关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306073"
+          replacement: "精英073关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306074"
+          replacement: "精英074关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306075"
+          replacement: "精英075关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306076"
+          replacement: "精英076关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306077"
+          replacement: "精英077关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306078"
+          replacement: "精英078关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306079"
+          replacement: "精英079关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306080"
+          replacement: "精英080关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306081"
+          replacement: "精英081关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306082"
+          replacement: "精英082关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306083"
+          replacement: "精英083关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306084"
+          replacement: "精英084关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306085"
+          replacement: "精英085关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306086"
+          replacement: "精英086关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306087"
+          replacement: "精英087关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306088"
+          replacement: "精英088关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306089"
+          replacement: "精英089关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306090"
+          replacement: "精英090关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306091"
+          replacement: "精英091关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306092"
+          replacement: "精英092关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306093"
+          replacement: "精英093关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306094"
+          replacement: "精英094关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306095"
+          replacement: "精英095关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306096"
+          replacement: "精英096关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306097"
+          replacement: "精英097关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306098"
+          replacement: "精英098关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306099"
+          replacement: "精英099关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306100"
+          replacement: "精英100关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306101"
+          replacement: "精英101关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306102"
+          replacement: "精英102关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306103"
+          replacement: "精英103关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306104"
+          replacement: "精英104关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306105"
+          replacement: "精英105关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306106"
+          replacement: "精英106关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306107"
+          replacement: "精英107关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306108"
+          replacement: "精英108关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306109"
+          replacement: "精英109关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306110"
+          replacement: "精英110关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306111"
+          replacement: "精英111关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306112"
+          replacement: "精英112关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306113"
+          replacement: "精英113关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306114"
+          replacement: "精英114关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306115"
+          replacement: "精英115关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306116"
+          replacement: "精英116关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306117"
+          replacement: "精英117关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306118"
+          replacement: "精英118关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306119"
+          replacement: "精英119关宝石宝箱"
+- replace:
+      fields:
+        - field: "ItemId"
+          pattern: "20306120"
+          replacement: "精英120关宝石宝箱"
