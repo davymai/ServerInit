@@ -1895,9 +1895,8 @@ EOF
     fi
 
     yumInstall mongodb-org
-    sudo systemctl enable mongod
 
-    if ! sudo systemctl start mongod; then
+    if ! sudo systemctl enable mongod; then
       error "mongodb 4 启动失败，请检查配置!\n"
     else
       success "mongodb 4 安装完成。\n"
@@ -1913,8 +1912,7 @@ EOF
     sudo apt-get update
     sudo apt-get install -y mongodb-org
 
-    sudo systemctl enable mongod
-    if ! sudo systemctl start mongod; then
+    if ! sudo systemctl enable mongod; then
       error "mongodb 4 启动失败，请检查配置!\n"
     else
       success "mongodb 4 安装完成。\n"
@@ -1964,15 +1962,11 @@ EOF
     cont "Firewalld 防火墙放通 MongoDB ${C3}$mongodb_port${CF} 端口..."
     if [[ "$OS" == "Ubuntu" ]]; then
       sudo ufw allow "$mongodb_port"/tcp
-      sudo systemctl restart mongod
+      success "MongoDB 端口: ${C3}$mongodb_port${CF} 设置完成。\n"
     elif [[ "$OS" == *"Rocky"* ]] || [[ "$OS" == *"CentOS"* ]]; then
       sudo firewall-cmd --permanent --zone=public --add-port="$mongodb_port"/tcp
       sudo firewall-cmd --reload
-      if ! sudo systemctl restart mongod; then
-        error "MongoDB 重启失败，请检查配置!\n"
-      else
-        success "MongoDB 端口: ${C3}$mongodb_port${CF} 设置完成。\n"
-      fi
+      success "MongoDB 端口: ${C3}$mongodb_port${CF} 设置完成。\n"
     fi
   else
     error "未找到 MongoDB 配置文件 /etc/mongod.conf。\n"
@@ -2140,8 +2134,7 @@ install_mysql8() {
     error "未找到 MySQL 配置文件。"
   fi
 
-  sudo systemctl enable mysqld
-  if ! sudo systemctl start mysqld; then
+  if ! sudo systemctl enable mysqld; then
     error "MySQL 启动失败，请检查配置!\n"
   else
     success "MySQL 8 安装启动完成。\n"
@@ -2192,15 +2185,11 @@ install_mysql8() {
 
   if [[ "$OS" == "Ubuntu" ]]; then
     sudo ufw allow "$mysql_port"/tcp
-    sudo systemctl restart mysqld
+    success "成功设置 MySQL 端口为: ${C3}$mysql_port${CF}\n"
   elif [[ "$OS" == *"Rocky"* ]] || [[ "$OS" == *"CentOS"* ]]; then
     sudo firewall-cmd --permanent --zone=public --add-port="$mysql_port"/tcp
     sudo firewall-cmd --reload
-    if ! sudo systemctl restart mysqld; then
-      error "mysqld 服务重启失败，请检查配置!\n"
-    else
-      success "成功设置 MySQL 端口为: ${C3}$mysql_port${CF}\n"
-    fi
+    success "成功设置 MySQL 端口为: ${C3}$mysql_port${CF}\n"
   fi
 
   info "*** 设置 MySQL 8 密码 ***"
@@ -2243,12 +2232,12 @@ install_mysql8() {
     sudo /usr/bin/mysql -S /var/lib/mysql/mysql.sock -p"$random_passwd" --connect-expired-password -e "alter user 'root'@'localhost' identified with mysql_native_password by '$mysql_passwd';use mysql;update user set host='%' where user='root';flush privileges;"
   fi
 
-  cont "设置 root 密码成功。正在重启 mysqld..."
-  if ! sudo systemctl restart mysqld; then
-    error "mysqld 服务重启失败，请检查配置!\n"
-  else
-    success "MySQL root 密码设置为: ${C3}$mysql_passwd${CF}\n"
-  fi
+  #cont "设置 root 密码成功。正在重启 mysqld..."
+  #if ! sudo systemctl restart mysqld; then
+  #  error "mysqld 服务重启失败，请检查配置!\n"
+  #else
+  #  success "MySQL root 密码设置为: ${C3}$mysql_passwd${CF}\n"
+  #fi
 
   info "*** 添加 MySQL 用户 ***"
 
@@ -2295,11 +2284,11 @@ install_mysql8() {
 
   cont "设置 $mysql_user_name 密码成功。正在重启 mysqld..."
 
-  if ! sudo systemctl restart mysqld; then
-    error "mysqld 服务重启失败，请检查 create_mysql_user 配置!\n"
-  else
-    success "MySQL 密码成功设置为: ${C3}$mysql_user_passwd${CF}\n\n"
-  fi
+  #if ! sudo systemctl restart mysqld; then
+  #  error "mysqld 服务重启失败，请检查 create_mysql_user 配置!\n"
+  #else
+  #  success "MySQL 密码成功设置为: ${C3}$mysql_user_passwd${CF}\n\n"
+  #fi
 
 }
 
@@ -2334,8 +2323,7 @@ install_redis() {
     error "未找到 Redis 配置文件 /etc/redis.conf。\n"
   fi
 
-  sudo systemctl enable redis
-  if ! sudo systemctl start redis; then
+  if ! sudo systemctl enable redis; then
     error "Redis 安装失败，请检查 install_redis 配置!\n"
   else
     success "Redis 安装启动完成。\n"
@@ -2379,15 +2367,11 @@ install_redis() {
 
   if [[ "$OS" == *"Ubuntu"* ]]; then
     sudo ufw allow "$Redis_port"/tcp
-    sudo systemctl restart redis
+    success "成功设置 Redis 端口为: ${C3}$Redis_port${CF}\n"
   elif [[ "$OS" == *"Rocky"* ]] || [[ "$OS" == *"CentOS"* ]]; then
     sudo firewall-cmd --permanent --zone=public --add-port="$Redis_port"/tcp
     sudo firewall-cmd --reload
-    if ! sudo systemctl restart redis; then
-      error "Redis 服务重启失败，请检查 config_redis_port 配置!\n"
-    else
-      success "成功设置 Redis 端口为: ${C3}$Redis_port${CF}\n"
-    fi
+    success "成功设置 Redis 端口为: ${C3}$Redis_port${CF}\n"
   fi
 
   info "*** 设置 Redis 访问密码 ***"
@@ -2416,23 +2400,11 @@ install_redis() {
     fi
   done
 
-  if [ "$Redis_passwd" = "" ]; then
-    if ! sudo systemctl restart redis; then
-      error "Redis 服务重启失败，请检查 config_redis_password 配置!\n"
-    else
-      success "成功设置 Redis 访问密码为: <空>\n"
-    fi
+  if [ -s /etc/redis.conf ]; then
+    sudo sed -i '/# requirepass foobared/a\requirepass '"$Redis_passwd"'' /etc/redis.conf
+    success "成功设置 Redis 访问密码为: ${C1}$Redis_passwd${CF}\n"
   else
-    if [ -s /etc/redis.conf ]; then
-      sudo sed -i '/# requirepass foobared/a\requirepass '"$Redis_passwd"'' /etc/redis.conf
-      if ! sudo systemctl restart redis; then
-        error "Redis 服务重启失败，请检查 config_redis_password 配置!\n"
-      else
-        success "成功设置 Redis 访问密码为: ${C1}$Redis_passwd${CF}\n"
-      fi
-    else
-      error "未找到 Redis 配置文件 /etc/redis.conf。\n"
-    fi
+    error "未找到 Redis 配置文件 /etc/redis.conf。\n"
   fi
 
 }
